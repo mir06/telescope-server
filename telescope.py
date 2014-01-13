@@ -35,15 +35,19 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
 
     def handle_stellarium(self, data):
         if self.server.ready:
+            # indicate other stellarium request to finish
+            self.only_stellarium_request = False
+
+            # time
             mtime = data.read('intle:64')
 
-            # RA:
+            # RA
             ant_pos = data.bitpos
             ra = data.read('hex:32')
             data.bitpos = ant_pos
             ra_uint = data.read('uintle:32')
 
-            # DEC:
+            # DEC
             ant_pos = data.bitpos
             dec = data.read('hex:32')
             data.bitpos = ant_pos
@@ -52,17 +56,36 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
             ra, dec = self._stellarium2coords(ra_uint, dec_int)
             logging.info("goto: ra: %f, dec: %f", ra, dec, extra=self.extra)
 
-            self.server.object._ra = "%f" % ra
-            self.server.object._dec = "%f" % dec
+            self.server.target._ra = "%f" % ra
+            self.server.target._dec = "%f" % dec
             self.server.observer.date = datetime.utcnow()
 
-            self.server.object.compute(self.server.observer)
-            az = self.server.object.az / ephem.degree
-            alt = self.server.object.alt / ephem.degree
+            self.server.target.compute(self.server.observer)
+            az = self.server.target.az / ephem.degree
+            alt = self.server.target.alt / ephem.degree
             logging.debug("time: %s", self.server.observer.date, extra=self.extra)
             logging.info("az: %f, alt: %f", az, alt, extra=self.extra)
 
-            self.server.motors["az"].move(az)
+            # threaded motor move
+            self.server.move(az, alt)
+
+            # allow this stellarium request to run until another arrives
+            self.only_stellarium_request = True
+            while self.only_stellarium_request:
+                self.server.observer.date = datetime.utcnow()
+                current = self.server.observer.radec_of(
+                    self.server.motor["az"].angle * ephem.degree,
+                    self.server.motor["alt"].angle * ephem.degree
+                    )
+                msize = '0x1800'
+                mtype = '0x0000'
+                localtime = ConstBitStream(replace('int:64="%r"' % time(), '.', ''))
+                sdata = ConstBitStream(msize) + ConstBitStream(mtype)
+                sdata += ConstBitStream(intle=localtime.intle, length=64)
+                sdata += ConstBitStream(uintle=ra, length=32)
+                sdata += ConstBitStream(intle=dec, length=32)
+                sdata +=
+
 
         else:
             logging.info("telescope not calibrated", extra=self.extra)
@@ -117,7 +140,7 @@ class TelescopeServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     def __init__(self, server_address, motors, RequestHandler):
         SocketServer.TCPServer.__init__(self, server_address, RequestHandler)
         self.motors = motors
-        self.object = ephem.FixedBody()
+        self.target = ephem.FixedBody()
         self.observer = ephem.Observer()
 
         # testing
@@ -136,6 +159,18 @@ class TelescopeServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             ret = ret and motor.calibrated
         ret = ret and self.observer.lat != 0
         return ret
+
+    def move(self, az, alt):
+        # wait for motor moves if there are ones
+        try:
+            for t in self.threads:
+                t.join()
+        except:
+            pass
+        self.threads = [ Thread(target=self.motors["az"].move, args=az),
+                         Thread(target=self.motors["alt"].move, args=alt) ]
+        for t in self.threads:
+            t.start()
 
 if __name__ == "__main__":
     GPIO.setmode(GPIO.BCM)

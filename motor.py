@@ -51,6 +51,8 @@ class Motor(object):
         for step in xrange(steps):
             GPIO.output(self.PUL, True)
             GPIO.output(self.PUL, False)
+            if self._angle != None and self._steps_per_rev:
+                self._angle += (direction-.5)*(720./self._steps_per_rev)
             time.sleep(.05)
 
     def move(self, angle):
@@ -60,15 +62,7 @@ class Motor(object):
             if angle_to_move > 180:
                 angle_to_move = - (360.-angle_to_move)
             steps = self._steps_per_rev * angle_to_move / 360
-            self._angle = angle
-            self._move(int(abs(round(steps))), steps>0)
-
-    def _move(self, steps, direction):
-        GPIO.output(self.DIR, direction)
-        for step in xrange(steps):
-            GPIO.output(self.PUL, True)
-            GPIO.output(self.PUL, False)
-            time.sleep(.05)
+            self.step(int(abs(round(steps))), steps>0)
 
 if __name__ == "__main__":
     GPIO.setmode(GPIO.BCM)
