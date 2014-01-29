@@ -9,7 +9,6 @@ from string import replace
 from time import time, sleep
 from bitstring import BitArray, BitStream, ConstBitStream
 import ephem
-import RPi.GPIO as GPIO
 from motor import Motor
 
 def getopts():
@@ -213,8 +212,12 @@ class TelescopeServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             t.start()
 
 if __name__ == "__main__":
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setwarnings(False)
+    try:
+        # if running on raspberry set the BPIO mode
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setwarnings(False)
+    except:
+        pass
 
     args = getopts()
 

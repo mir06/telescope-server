@@ -1,5 +1,26 @@
 import time
-import RPi.GPIO as GPIO
+
+# if not running on raspberry just ignore
+# the actual control of the motors
+try:
+    import RPi.GPIO as GPIO
+except:
+    class gpio:
+        OUT = 0
+        BCM = 0
+        def setmode(self, i):
+            pass
+        def setwarnings(self, b):
+            pass
+        def setup(self, p, i):
+            pass
+        def output(self, p, b):
+            pass
+
+    GPIO = gpio()
+
+GPIO.setmode(GPIO.BCM)
+GPIO.setwarnings(False)
 
 class Motor(object):
     def __init__(self, name, pins, min_angle=0, max_angle=360):
@@ -63,12 +84,4 @@ class Motor(object):
                 angle_to_move = - (360.-angle_to_move)
             steps = self._steps_per_rev * angle_to_move / 360
             self.step(int(abs(round(steps))), steps>0)
-
-if __name__ == "__main__":
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setwarnings(False)
-    motor = Motor([15,14])
-    motor.move_to(90)
-    motor.move_to(280)
-    motor.move_to(0)
 
