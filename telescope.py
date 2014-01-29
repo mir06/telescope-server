@@ -34,8 +34,7 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
 
     def handle_stellarium(self, data):
         if self.server.ready:
-            # indicate other stellarium request to finish
-            self.only_stellarium_request = False
+            logging.debug("stellarium goto command", extra=self.extra)
 
             # time
             mtime = data.read('intle:64')
@@ -53,52 +52,21 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
             dec_int = data.read('intle:32')
 
             ra, dec = self._stellarium2coords(ra_uint, dec_int)
-            logging.info("goto: ra: %f, dec: %f", ra, dec, extra=self.extra)
 
             self.server.target._ra = "%f" % ra
             self.server.target._dec = "%f" % dec
             self.server.observer.date = datetime.utcnow()
 
             self.server.target.compute(self.server.observer)
-            az = self.server.target.az / ephem.degree
-            alt = self.server.target.alt / ephem.degree
-            logging.debug("time: %s", self.server.observer.date, extra=self.extra)
-            logging.info("az: %f, alt: %f", az, alt, extra=self.extra)
-            ra, dec = self.server.observer.radec_of(
-                az ,
-                alt
-            )
-            logging.info("ra: %f, dec: %f", ra, dec, extra=self.extra)
 
-            # threaded motor move
-            self.server.move(az, alt)
+            dt = self.server.observer.date
+            ra, dec = self.server.target.ra, self.server.target.dec
+            az, alt = self.server.target.az, self.server.target.alt
 
-            # allow this stellarium request to run until another arrives
-            self.only_stellarium_request = True
-#            sleep(10)
-#            for aa in xrange(10):
-#            while self.only_stellarium_request:
-            #     self.server.observer.date = datetime.utcnow()
-            #     ra, dec = self.server.observer.radec_of(
-            #         self.server.motors["az"].angle * ephem.degree,
-            #         self.server.motors["alt"].angle * ephem.degree
-            #         )
-            #     ra_s, dec_s = self._coords2stellarium( ra, dec )
-            #     msize = '0x1800'
-            #     mtype = '0x0000'
-            #     localtime = ConstBitStream(replace('int:64=%r' % time(), '.', ''))
-            #     sdata = ConstBitStream(msize) + ConstBitStream(mtype)
-            #     sdata += ConstBitStream(intle=localtime.intle, length=64)
-            #     sdata += ConstBitStream(uintle=ra_uint, length=32)
-            #     sdata += ConstBitStream(intle=dec_int, length=32)
-            #     sdata += ConstBitStream(intle=0, length=32)
-            #     logging.debug("sending data: ra: %f, dec: %f", ra, dec, extra=self.extra)
-            #     self.request.send(sdata.bytes)
-            #     # sleep(1)
-            # logging.debug("motor az: %f, alt: %f", self.server.motors["az"].angle,
-            #               self.server.motors["alt"].angle, extra=self.extra)
-            # self.request.close()
+            logging.debug("ra: %12s, dec: %12s, time: %20s", ra, dec, dt, extra=self.extra)
+            logging.debug("az: %12s, alt: %12s, time: %20s", az, alt, dt, extra=self.extra)
 
+            self.server.move(az / ephem.degree, alt / ephem.degree)
 
         else:
             logging.info("telescope not calibrated", extra=self.extra)
@@ -115,47 +83,48 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
 
     def handle(self):
         self.extra = {'clientip': self.client_address[0]}
-        data0 = ''
         logging.debug("connection established", extra=self.extra)
-        # self.request.setblocking(False)
-        # try:
-        #     data0 = self.request.recv(160)
-        # except SocketServer.socket.error, e:
-        #     print e
+        while True:
+            data0 = ''
+            self.request.setblocking(0)
+            try:
+                data0 = self.request.recv(160)
+            except SocketServer.socket.error, e:
+                pass
 
-        if data0:
-            data = ConstBitStream(bytes=data0, length=160)
-            msize = data.read('intle:16')
-            mtype = data.read('intle:16')
+            if data0:
+                data = ConstBitStream(bytes=data0, length=160)
+                msize = data.read('intle:16')
+                mtype = data.read('intle:16')
 
-            logging.debug("client-type: %d", mtype, extra=self.extra)
-            if mtype == 0:
-                # stellarium telescope client
-                self.handle_stellarium(data)
-            elif mtype == 1:
-                # set observer
-                # LON (4 bytes), LAT (4 bytes), ALT (2 bytes)
-                self.set_observer(data)
-        else:
-            # send current position
-            logging.debug("no data received", extra=self.extra)
-            self.server.observer.date = datetime.utcnow()
-            ra, dec = self.server.observer.radec_of(
-                self.server.motors["az"].angle * ephem.degree,
-                self.server.motors["alt"].angle * ephem.degree
-            )
-            print ra, dec
-            ra_s, dec_s = self._coords2stellarium( 10., 22. )
-            msize = '0x1800'
-            mtype = '0x0000'
-            localtime = ConstBitStream(replace('int:64=%r' % time(), '.', ''))
-            sdata = ConstBitStream(msize) + ConstBitStream(mtype)
-            sdata += ConstBitStream(intle=localtime.intle, length=64)
-            sdata += ConstBitStream(uintle=ra_s, length=32)
-            sdata += ConstBitStream(intle=dec_s, length=32)
-            sdata += ConstBitStream(intle=0, length=32)
-            logging.debug("sending data: ra: %f, dec: %f", ra, dec, extra=self.extra)
-            self.request.send(sdata.bytes)
+                if mtype == 0:
+                    # stellarium telescope client
+                    self.handle_stellarium(data)
+                elif mtype == 1:
+                    # set observer
+                    # LON (4 bytes), LAT (4 bytes), ALT (2 bytes)
+                    self.set_observer(data)
+            else:
+                if self.server.ready:
+                    # send current position
+                    self.server.observer.date = datetime.utcnow()
+                    ra, dec = self.server.observer.radec_of(
+                        self.server.motors["az"].angle * ephem.degree,
+                        self.server.motors["alt"].angle * ephem.degree
+                        )
+
+                    ra_s, dec_s = self._coords2stellarium( ra/(15.*ephem.degree), dec/ephem.degree )
+                    msize = '0x1800'
+                    mtype = '0x0000'
+                    localtime = ConstBitStream(replace('int:64=%r' % time(), '.', ''))
+                    sdata = ConstBitStream(msize) + ConstBitStream(mtype)
+                    sdata += ConstBitStream(intle=localtime.intle, length=64)
+                    sdata += ConstBitStream(uintle=ra_s, length=32)
+                    sdata += ConstBitStream(intle=dec_s, length=32)
+                    sdata += ConstBitStream(intle=0, length=32)
+                    logging.debug("sending data: ra: %12s, dec: %12s, time: %20s", ra, dec, ephem.now(), extra=self.extra)
+                    self.request.send(sdata.bytes)
+                    sleep(.5)
 
 
         # for x in range(10):
@@ -189,7 +158,7 @@ class TelescopeServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
         for m in self.motors.values():
             m.angle=0
-            m.steps_per_rev=800
+            m.steps_per_rev=3200
 
     @property
     def ready(self):
@@ -212,13 +181,6 @@ class TelescopeServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             t.start()
 
 if __name__ == "__main__":
-    try:
-        # if running on raspberry set the BPIO mode
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setwarnings(False)
-    except:
-        pass
-
     args = getopts()
 
     # set logging level
