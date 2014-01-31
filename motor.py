@@ -31,6 +31,8 @@ class Motor(object):
         self._angle = None
         self._min_angle = min_angle
         self._max_angle = max_angle
+        self._steps = 0
+        self._stop = False
         for p in pins:
             GPIO.setup(p, GPIO.OUT)
             GPIO.output(p, True)
@@ -67,11 +69,23 @@ class Motor(object):
     def calibrated(self):
         return (self._angle != None) and (self._steps_per_rev>0)
 
+    @property
+    def stop(self):
+        return self._stop
+
+    @stop.setter
+    def stop(self, value):
+        self._stop = value
+
     def step(self, steps, direction):
+        self._stop = False
         GPIO.output(self.DIR, direction)
         for step in xrange(steps):
+            if self._stop:
+                break
             GPIO.output(self.PUL, True)
             GPIO.output(self.PUL, False)
+            self._steps += 2*(direction-.5)
             if self._angle != None and self._steps_per_rev:
                 self._angle += (direction-.5)*(720./self._steps_per_rev)
             time.sleep(.05)

@@ -9,6 +9,7 @@ from string import replace
 from time import time, sleep
 from bitstring import BitArray, BitStream, ConstBitStream
 import ephem
+import ephem.stars
 from motor import Motor
 
 def getopts():
@@ -31,6 +32,14 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
 
     def _coords2stellarium(self, ra, dec):
         return (int(ra*(2147483648/12.0)), int(dec*(1073741824/90.0)))
+
+    def return_visible_objects(self):
+        ret = []
+        for obj in self.server.objects:
+            obj.compute(self.server.observer)
+            ret.append("%s:%d" % (obj.name, obj.alt > 0))
+        self.request.sendall(','.join(ret))
+
 
     def handle_stellarium(self, data):
         if self.server.ready:
@@ -66,12 +75,17 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
             logging.debug("ra: %12s, dec: %12s, time: %20s", ra, dec, dt, extra=self.extra)
             logging.debug("az: %12s, alt: %12s, time: %20s", az, alt, dt, extra=self.extra)
 
+            self.server.stop()
             self.server.move(az / ephem.degree, alt / ephem.degree)
 
         else:
             logging.info("telescope not calibrated", extra=self.extra)
 
     def set_observer(self, data):
+        """
+        set lon/lat/alt of observer
+        return a list of visible objects in our solar system
+        """
         self.server.observer.lon = data.read('floatle:32')
         self.server.observer.lat = data.read('floatle:32')
         self.server.observer.elev = data.read('floatle:32')
@@ -80,6 +94,22 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
                         self.server.observer.lat,
                         self.server.observer.elev,
                         extra=self.extra)
+        self.return_visible_objects()
+
+    def set_following(self, data):
+        """
+        start/stop following fixed object
+        """
+        if self.server._follow:
+            self.server._follow = False
+            self.server.following.join()
+            logging.debug("stop following", extra=self.extra)
+        else:
+            self.server._follow = True
+            self.server.following = Thread(target=self.server.follow)
+            self.server.following.start()
+            logging.debug("start following", extra=self.extra)
+        self.return_visible_objects()
 
     def handle(self):
         self.extra = {'clientip': self.client_address[0]}
@@ -101,9 +131,15 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
                     # stellarium telescope client
                     self.handle_stellarium(data)
                 elif mtype == 1:
-                    # set observer
+                    # set observer and leave the endless loop
                     # LON (4 bytes), LAT (4 bytes), ALT (2 bytes)
                     self.set_observer(data)
+                    break
+                elif mtype == 2:
+                    # start or stop tracking on current object
+                    self.set_following(data)
+                    break
+
             else:
                 if self.server.ready:
                     # send current position
@@ -127,18 +163,6 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
                     sleep(.5)
 
 
-        # for x in range(10):
-        #     localtime = ConstBitStream(replace('int:64=%r' % time(), '.', ''))
-        #     reply = ConstBitStream('0x1800') + ConstBitStream('0x0000')
-        #     reply += ConstBitStream(intle=localtime.intle, length=64) + ConstBitStream(uintle=ra_uint, length=32)
-        #     reply += ConstBitStream(intle=dec_int, length=32) + ConstBitStream(intle=0, length=32)
-        #     print " sending"
-        #     self.request.send(reply.bytes)
-        #     sleep(.001)
-        # self.request.close()
-
-
-
 class TelescopeServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     # Ctrl-C will cleanly kill all spawned threads
     daemon_threads = True
@@ -149,16 +173,58 @@ class TelescopeServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         SocketServer.TCPServer.__init__(self, server_address, RequestHandler)
         self.motors = motors
         self.target = ephem.FixedBody()
+        self.target._ra = 0.
+        self.target._dec = 0.
         self.observer = ephem.Observer()
-
         # testing
         self.observer.lon = '15:25:12.0'
         self.observer.lat = '47:4:48.01'
         self.observer.elev = 362
 
+        # interesting objects in our solar system
+        self.objects = [
+            ephem.Sun(),
+            ephem.Moon(),
+            ephem.Mercury(),
+            ephem.Venus(),
+            ephem.Mars(),
+            ephem.Jupiter(),
+            ephem.Saturn(),
+            ephem.Uranus(),
+            ephem.Neptune(),
+            ephem.Pluto(),
+            ephem.Phobos(),
+            ephem.Deimos(),
+            ephem.Io(),
+            ephem.Europa(),
+            ephem.Ganymede(),
+            ephem.Callisto(),
+            ephem.Mimas(),
+            ephem.Enceladus(),
+            ephem.Tethys(),
+            ephem.Dione(),
+            ephem.Rhea(),
+            ephem.Titan(),
+            ephem.Iapetus(),
+            ephem.Hyperion(),
+            ephem.Miranda(),
+            ephem.Ariel(),
+            ephem.Umbriel(),
+            ephem.Titania(),
+            ephem.Oberon()
+        ]
+
+        # stars
+        self.stars = sorted([ x.split(',')[0] for x in  ephem.stars.db.split() ])
+
+
         for m in self.motors.values():
             m.angle=0
-            m.steps_per_rev=3200
+            m.steps_per_rev=99000
+
+
+        self._follow = False
+#        self.following.start()
 
     @property
     def ready(self):
@@ -167,6 +233,13 @@ class TelescopeServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             ret = ret and motor.calibrated
         ret = ret and self.observer.lat != 0
         return ret
+
+    def stop(self):
+        """
+        stop motors
+        """
+        self.motors["az"].stop = True
+        self.motors["alt"].stop = True
 
     def move(self, az, alt):
         # wait for motor moves if there are ones
@@ -179,6 +252,25 @@ class TelescopeServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                          Thread(target=self.motors["alt"].move, args=[alt]) ]
         for t in self.threads:
             t.start()
+
+    def follow(self):
+        while self._follow:
+           try:
+                self.observer.date = datetime.utcnow()
+                self.target.compute(self.observer)
+                ra, dec = self.target.ra, self.target.dec
+                az, alt = self.target.az, self.target.alt
+                dt = self.observer.date
+
+                logging.debug("follow", extra={'clientip': 'localhost'})
+                logging.debug("ra: %12s, dec: %12s, time: %20s", ra, dec, dt, extra={'clientip': 'localhost'})
+                logging.debug("az: %12s, alt: %12s, time: %20s", az, alt, dt, extra={'clientip': 'localhost'})
+
+                self.move(az / ephem.degree, alt / ephem.degree)
+                sleep(.1)
+           except:
+               pass
+
 
 if __name__ == "__main__":
     args = getopts()
