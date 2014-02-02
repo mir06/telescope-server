@@ -75,8 +75,10 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
             logging.debug("ra: %12s, dec: %12s, time: %20s", ra, dec, dt, extra=self.extra)
             logging.debug("az: %12s, alt: %12s, time: %20s", az, alt, dt, extra=self.extra)
 
+            self.set_following(ConstBitStream('0x00000000'), False)
             self.server.stop()
             self.server.move(az / ephem.degree, alt / ephem.degree)
+            self.set_following(ConstBitStream('0xff00ffff'), False)
 
         else:
             logging.info("telescope not calibrated", extra=self.extra)
@@ -94,21 +96,52 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
                         self.server.observer.lat,
                         self.server.observer.elev,
                         extra=self.extra)
-        self.return_visible_objects()
+        if ret:
+            self.return_visible_objects()
 
-    def set_following(self, data):
+    def set_following(self, data, ret=True):
         """
         start/stop following fixed object
         """
-        if self.server._follow:
+        nr = data.read('intle:16')
+        on = data.read('intle:16')
+        try:
+            self.server.follow_object = self.server.objects[nr]
+        except:
+            self.server.follow_object = self.server.target
+
+        # if following is active close it
+        try:
             self.server._follow = False
             self.server.following.join()
-            logging.debug("stop following", extra=self.extra)
-        else:
+            logging.debug("stop following %s", obj.name, extra=self.extra)
+        except:
+            pass
+
+        if on:
             self.server._follow = True
             self.server.following = Thread(target=self.server.follow)
             self.server.following.start()
-            logging.debug("start following", extra=self.extra)
+            logging.debug("start following %s", self.server.follow_object.name, extra=self.extra)
+        if ret:
+            self.return_visible_objects()
+
+    def make_step(self, data):
+        """
+        make steps with the motors
+        """
+        steps_az = data.read('intle:16')
+        steps_alt = data.read('intle:16')
+        self.server.motors["az"].step(abs(steps_az), steps_az>0)
+        self.server.motors["alt"].step(abs(steps_alt), steps_alt>0)
+        print "vorher  ", self.server.target._ra, self.server.target._dec
+        self.server.target._ra, self.server.target._dec = \
+            self.server.observer.radec_of(
+                self.server.target.az + \
+                steps_az*ephem.twopi/self.server.motors["az"].steps_per_rev,
+                self.server.target.alt + \
+                steps_alt*ephem.twopi/self.server.motors["alt"].steps_per_rev)
+        print "nachher ", self.server.target._ra, self.server.target._dec
         self.return_visible_objects()
 
     def handle(self):
@@ -137,7 +170,16 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
                     break
                 elif mtype == 2:
                     # start or stop tracking on current object
+                    # object number (2 bytes): 0..len(self.objects) = solar system objects,
+                    #                          everything else is fixed object
+                    # on/off (2 bytes)
                     self.set_following(data)
+                    break
+                elif mtype == 3:
+                    # make one step with the motors
+                    # az motor steps (2 bytes): number of steps of azimutal motor
+                    # alt motor steps (2 bytes): number of steps of altitudinal motor
+                    self.make_step(data)
                     break
 
             else:
@@ -159,7 +201,10 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
                     sdata += ConstBitStream(intle=dec_s, length=32)
                     sdata += ConstBitStream(intle=0, length=32)
                     logging.debug("sending data: ra: %12s, dec: %12s, time: %20s", ra, dec, ephem.now(), extra=self.extra)
-                    self.request.send(sdata.bytes)
+                    try:
+                        self.request.send(sdata.bytes)
+                    except:
+                        pass
                     sleep(.5)
 
 
@@ -173,8 +218,7 @@ class TelescopeServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         SocketServer.TCPServer.__init__(self, server_address, RequestHandler)
         self.motors = motors
         self.target = ephem.FixedBody()
-        self.target._ra = 0.
-        self.target._dec = 0.
+        self.target.name = 'fixed object'
         self.observer = ephem.Observer()
         # testing
         self.observer.lon = '15:25:12.0'
@@ -220,10 +264,11 @@ class TelescopeServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
         for m in self.motors.values():
             m.angle=0
-            m.steps_per_rev=99000
+            m.steps_per_rev=216000*6
 
 
         self._follow = False
+        self._follow_object = False
 #        self.following.start()
 
     @property
@@ -238,8 +283,8 @@ class TelescopeServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         """
         stop motors
         """
-        self.motors["az"].stop = True
-        self.motors["alt"].stop = True
+        for m in self.motors.values():
+            m.stop = True
 
     def move(self, az, alt):
         # wait for motor moves if there are ones
@@ -255,21 +300,18 @@ class TelescopeServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
     def follow(self):
         while self._follow:
-           try:
-                self.observer.date = datetime.utcnow()
-                self.target.compute(self.observer)
-                ra, dec = self.target.ra, self.target.dec
-                az, alt = self.target.az, self.target.alt
-                dt = self.observer.date
+            self.observer.date = datetime.utcnow()
+            self.follow_object.compute(self.observer)
+            ra, dec = self.follow_object.ra, self.follow_object.dec
+            az, alt = self.follow_object.az, self.follow_object.alt
+            dt = self.observer.date
 
-                logging.debug("follow", extra={'clientip': 'localhost'})
-                logging.debug("ra: %12s, dec: %12s, time: %20s", ra, dec, dt, extra={'clientip': 'localhost'})
-                logging.debug("az: %12s, alt: %12s, time: %20s", az, alt, dt, extra={'clientip': 'localhost'})
+            # logging.debug("follow", extra={'clientip': 'localhost'})
+            # logging.debug("ra: %12s, dec: %12s, time: %20s", ra, dec, dt, extra={'clientip': 'localhost'})
+            # logging.debug("az: %12s, alt: %12s, time: %20s", az, alt, dt, extra={'clientip': 'localhost'})
 
-                self.move(az / ephem.degree, alt / ephem.degree)
-                sleep(.1)
-           except:
-               pass
+            self.move(az / ephem.degree, alt / ephem.degree)
+            sleep(.1)
 
 
 if __name__ == "__main__":

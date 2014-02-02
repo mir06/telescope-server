@@ -88,7 +88,7 @@ class Motor(object):
             self._steps += 2*(direction-.5)
             if self._angle != None and self._steps_per_rev:
                 self._angle += (direction-.5)*(720./self._steps_per_rev)
-            time.sleep(.05)
+            time.sleep(.01)
 
     def move(self, angle):
         angle = angle % 360
