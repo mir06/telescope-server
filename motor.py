@@ -35,7 +35,7 @@ class Motor(object):
         self._stop = False
         for p in pins:
             GPIO.setup(p, GPIO.OUT)
-            GPIO.output(p, True)
+            GPIO.output(p, False)
 
     def __str__(self):
         return self.name
@@ -88,7 +88,7 @@ class Motor(object):
             self._steps += 2*(direction-.5)
             if self._angle != None and self._steps_per_rev:
                 self._angle += (direction-.5)*(720./self._steps_per_rev)
-            time.sleep(.01)
+            time.sleep(.05)
 
     def move(self, angle):
         angle = angle % 360

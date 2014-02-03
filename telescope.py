@@ -41,6 +41,7 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
         self.request.sendall(','.join(ret))
 
 
+
     def handle_stellarium(self, data):
         if self.server.ready:
             logging.debug("stellarium goto command", extra=self.extra)
@@ -96,8 +97,7 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
                         self.server.observer.lat,
                         self.server.observer.elev,
                         extra=self.extra)
-        if ret:
-            self.return_visible_objects()
+        self.return_visible_objects()
 
     def set_following(self, data, ret=True):
         """
@@ -220,56 +220,31 @@ class TelescopeServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         self.target = ephem.FixedBody()
         self.target.name = 'fixed object'
         self.observer = ephem.Observer()
+
         # testing
         self.observer.lon = '15:25:12.0'
         self.observer.lat = '47:4:48.01'
         self.observer.elev = 362
 
+        for m in self.motors.values():
+            m.angle=0
+            m.steps_per_rev=400
+
+
+
         # interesting objects in our solar system
-        self.objects = [
-            ephem.Sun(),
-            ephem.Moon(),
-            ephem.Mercury(),
-            ephem.Venus(),
-            ephem.Mars(),
-            ephem.Jupiter(),
-            ephem.Saturn(),
-            ephem.Uranus(),
-            ephem.Neptune(),
-            ephem.Pluto(),
-            ephem.Phobos(),
-            ephem.Deimos(),
-            ephem.Io(),
-            ephem.Europa(),
-            ephem.Ganymede(),
-            ephem.Callisto(),
-            ephem.Mimas(),
-            ephem.Enceladus(),
-            ephem.Tethys(),
-            ephem.Dione(),
-            ephem.Rhea(),
-            ephem.Titan(),
-            ephem.Iapetus(),
-            ephem.Hyperion(),
-            ephem.Miranda(),
-            ephem.Ariel(),
-            ephem.Umbriel(),
-            ephem.Titania(),
-            ephem.Oberon()
-        ]
+        self.objects = [ ephem.Sun(), ephem.Moon(), ephem.Mercury(), ephem.Venus(), ephem.Mars(),
+                         ephem.Jupiter(), ephem.Saturn(), ephem.Uranus(), ephem.Neptune(), ephem.Pluto(),
+                         ephem.Phobos(), ephem.Deimos(), ephem.Io(), ephem.Europa(), ephem.Ganymede(),
+                         ephem.Callisto(), ephem.Mimas(), ephem.Enceladus(), ephem.Tethys(), ephem.Dione(),
+                         ephem.Rhea(), ephem.Titan(), ephem.Iapetus(), ephem.Hyperion(), ephem.Miranda(),
+                         ephem.Ariel(), ephem.Umbriel(), ephem.Titania(), ephem.Oberon() ]
 
         # stars
         self.stars = sorted([ x.split(',')[0] for x in  ephem.stars.db.split() ])
 
-
-        for m in self.motors.values():
-            m.angle=0
-            m.steps_per_rev=216000*6
-
-
         self._follow = False
         self._follow_object = False
-#        self.following.start()
 
     @property
     def ready(self):
@@ -283,6 +258,7 @@ class TelescopeServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         """
         stop motors
         """
+        print "stopping motors"
         for m in self.motors.values():
             m.stop = True
 
