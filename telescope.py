@@ -76,10 +76,8 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
             logging.debug("ra: %12s, dec: %12s, time: %20s", ra, dec, dt, extra=self.extra)
             logging.debug("az: %12s, alt: %12s, time: %20s", az, alt, dt, extra=self.extra)
 
-            self.set_following(ConstBitStream('0x00000000'), False)
-            self.server.stop()
-            self.server.move(az / ephem.degree, alt / ephem.degree)
-            self.set_following(ConstBitStream('0xff00ffff'), False)
+            # start following the target
+            self.set_following(ConstBitStream('0x00ff00ff'), False)
 
         else:
             logging.info("telescope not calibrated", extra=self.extra)
@@ -105,24 +103,30 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
         """
         nr = data.read('intle:16')
         on = data.read('intle:16')
+
+        # if following is active close it
+        try:
+            self.server.stop()
+            self.server._follow = False
+            self.server.following.join()
+            self.server.stop()
+
+            logging.debug("stop following %s", self.server.follow_object.name, extra=self.extra)
+        except:
+            pass
+
         try:
             self.server.follow_object = self.server.objects[nr]
         except:
             self.server.follow_object = self.server.target
 
-        # if following is active close it
-        try:
-            self.server._follow = False
-            self.server.following.join()
-            logging.debug("stop following %s", obj.name, extra=self.extra)
-        except:
-            pass
 
         if on:
             self.server._follow = True
             self.server.following = Thread(target=self.server.follow)
             self.server.following.start()
             logging.debug("start following %s", self.server.follow_object.name, extra=self.extra)
+
         if ret:
             self.return_visible_objects()
 
@@ -230,8 +234,6 @@ class TelescopeServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             m.angle=0
             m.steps_per_rev=400
 
-
-
         # interesting objects in our solar system
         self.objects = [ ephem.Sun(), ephem.Moon(), ephem.Mercury(), ephem.Venus(), ephem.Mars(),
                          ephem.Jupiter(), ephem.Saturn(), ephem.Uranus(), ephem.Neptune(), ephem.Pluto(),
@@ -258,7 +260,6 @@ class TelescopeServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         """
         stop motors
         """
-        print "stopping motors"
         for m in self.motors.values():
             m.stop = True
 
