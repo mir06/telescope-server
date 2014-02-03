@@ -138,14 +138,12 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
         steps_alt = data.read('intle:16')
         self.server.motors["az"].step(abs(steps_az), steps_az>0)
         self.server.motors["alt"].step(abs(steps_alt), steps_alt>0)
-        print "vorher  ", self.server.target._ra, self.server.target._dec
         self.server.target._ra, self.server.target._dec = \
             self.server.observer.radec_of(
                 self.server.target.az + \
                 steps_az*ephem.twopi/self.server.motors["az"].steps_per_rev,
                 self.server.target.alt + \
                 steps_alt*ephem.twopi/self.server.motors["alt"].steps_per_rev)
-        print "nachher ", self.server.target._ra, self.server.target._dec
         self.return_visible_objects()
 
     def handle(self):
@@ -232,7 +230,7 @@ class TelescopeServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
         for m in self.motors.values():
             m.angle=0
-            m.steps_per_rev=400
+            m.steps_per_rev=51200
 
         # interesting objects in our solar system
         self.objects = [ ephem.Sun(), ephem.Moon(), ephem.Mercury(), ephem.Venus(), ephem.Mars(),
