@@ -23,7 +23,7 @@ GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
 
 class Motor(object):
-    def __init__(self, name, pins, min_angle=0, max_angle=360):
+    def __init__(self, name, pins, min_angle=-361, max_angle=361):
         self.name = name
         self.PUL, self.DIR, self.ENBL = pins
         self._steps_per_rev = 0
@@ -47,6 +47,11 @@ class Motor(object):
     @steps_per_rev.setter
     def steps_per_rev(self, value):
         self._steps_per_rev = value
+        try:
+            self._minimum = self._min_angle + 360./value
+            self._maximum = self._max_angle - 360./value
+        except:
+            pass
 
     @property
     def enable(self):
@@ -63,7 +68,10 @@ class Motor(object):
 
     @angle.setter
     def angle(self, value):
-        self._angle = value % 360
+        value %= 360
+        if self._min_angle <= value <= self._max_angle:
+            self._angle = value % 360
+            print "%s %f" % (self.name, self._angle)
 
     @property
     def calibrated(self):
@@ -81,13 +89,16 @@ class Motor(object):
         self._stop = False
         GPIO.output(self.DIR, direction)
         for step in xrange(steps):
-            if self._stop:
+            if self._stop or \
+                (self._angle <= self._minimum and not direction) or \
+                (self._angle >= self._maximum and direction):
                 break
             GPIO.output(self.PUL, True)
             GPIO.output(self.PUL, False)
             self._steps += 2*(direction-.5)
             if self._angle != None and self._steps_per_rev:
                 self._angle += (direction-.5)*(720./self._steps_per_rev)
+                self._angle %= 360
             time.sleep(.01)
 
     def move(self, angle):
