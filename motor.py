@@ -74,6 +74,11 @@ class Motor(object):
             print "%s %f" % (self.name, self._angle)
 
     @property
+    def steps(self):
+        return self._steps
+
+
+    @property
     def calibrated(self):
         return (self._angle != None) and (self._steps_per_rev>0)
 

@@ -8,6 +8,7 @@ from threading import Thread
 from string import replace
 from time import time, sleep
 from bitstring import BitArray, BitStream, ConstBitStream
+from itertools import combinations
 import ephem
 import ephem.stars
 from motor import Motor
@@ -132,18 +133,21 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
 
         steps_az = data.read('intle:16')
         steps_alt = data.read('intle:16')
+        logging.debug("moving motors %d,%d", steps_az, steps_alt, extra=self.extra)
         self.server._motors["az"].step(abs(steps_az), steps_az>0)
         self.server._motors["alt"].step(abs(steps_alt), steps_alt>0)
-        self.server._observer.date = datetime.utcnow()
-        server._target.compute(server._observer)
-        self.server._target._ra, self.server._target._dec = \
-            self.server._observer.radec_of(
-                self.server._target.az + \
-                steps_az*ephem.twopi/self.server._motors["az"].steps_per_rev,
-                self.server._target.alt + \
-                steps_alt*ephem.twopi/self.server._motors["alt"].steps_per_rev)
-        if restart:
-            self.server._start_following(self.extra)
+        if self.server._ready:
+            self.server._observer.date = datetime.utcnow()
+            server._target.compute(server._observer)
+            self.server._target._ra, self.server._target._dec = \
+              self.server._observer.radec_of(
+                  self.server._target.az + \
+                  steps_az*ephem.twopi/self.server._motors["az"].steps_per_rev,
+                  self.server._target.alt + \
+                  steps_alt*ephem.twopi/self.server._motors["alt"].steps_per_rev)
+            if restart:
+                self.server._start_following(self.extra)
+
         self._return_visible_objects()
 
     def _set_coords_of_object(self, data):
@@ -157,10 +161,12 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
             obj.compute(self.server._observer)
             self.server._motors["az"].angle = obj.az / ephem.degree
             self.server._motors["alt"].angle = obj.alt / ephem.degree
+            self.server._set_calibration_marker(self.extra)
         except:
             pass
 
-        self._return_visible_objects()
+        # return number of markers
+        self.request.sendall("%d" % len(self.server.calibration_data["az"]))
 
     def _start_calibration(self):
         self.server._stop_following(self.extra)
@@ -171,7 +177,7 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
             self._return_visible_objects()
 
     def _stop_calibration(self):
-        pass
+        self.server._calibrate_motors()
 
     def handle(self):
         self.extra = {'clientip': self.client_address[0]}
@@ -263,11 +269,12 @@ class TelescopeServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         self._do_following = False
         self._follow_object = False
 
+        # initialize target and observer
         self._target = ephem.FixedBody()
         self._target.name = 'fixed object'
         self._observer = ephem.Observer()
 
-        # testing
+        ################ testing
         self._observer.lon = '15:25:12.0'
         self._observer.lat = '47:4:48.01'
         self._observer.elev = 362
@@ -275,21 +282,19 @@ class TelescopeServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         for m in self._motors.values():
             m.angle=0
             m.steps_per_rev=4000 #51200
+        ##################################
 
         # interesting objects in our solar system and main stars
         self._sky_objects = [
             ephem.Sun(), ephem.Moon(), ephem.Mercury(), ephem.Venus(), ephem.Mars(),
             ephem.Jupiter(), ephem.Saturn() ]
-        # , ephem.Uranus(), ephem.Neptune(), ephem.Pluto(),
-        #     ephem.Phobos(), ephem.Deimos(), ephem.Io(), ephem.Europa(), ephem.Ganymede(),
-        #     ephem.Callisto(), ephem.Mimas(), ephem.Enceladus(), ephem.Tethys(), ephem.Dione(),
-        #     ephem.Rhea(), ephem.Titan(), ephem.Iapetus(), ephem.Hyperion(), ephem.Miranda(),
-        #     ephem.Ariel(), ephem.Umbriel(), ephem.Titania(), ephem.Oberon() ]
-
         # stars
         for star in sorted([ x.split(',')[0] for x in ephem.stars.db.split('\n') if x ]):
             self._sky_objects.append( ephem.star(star))
 
+
+        # reset calibration of motors
+        self._uncalibrate_motors()
 
     @property
     def _ready(self):
@@ -351,8 +356,34 @@ class TelescopeServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             sleep(.1)
 
     def _uncalibrate_motors(self, extra={'clientip': 'localhost'}):
-        for motor in self._motors.values():
+        self.calibration_data = dict()
+        for name, motor in self._motors.iteritems():
             motor.steps_per_rev = 0
+            self.calibration_data[name] = []
+
+    def _set_calibration_marker(self, extra={'clientip': 'localhost'}):
+        for name, motor in self._motors.iteritems():
+            self.calibration_data[name].append((motor.angle, motor.steps))
+        logging.debug("calibration %s", self.calibration_data, extra=extra)
+
+    def _calibrate_motors(self, extra={'clientip': 'localhost'}):
+        for name, motor in self._motors.iteritems():
+            steps_list =[]
+            for comb in combinations(xrange(len(self.calibration_data[name])),2):
+                try:
+                    steps_per_rev = 360 * \
+                    (self.calibration_data[name][comb[1]][1]-self.calibration_data[name][comb[0]][1]) / \
+                    (self.calibration_data[name][comb[1]][0]-self.calibration_data[name][comb[0]][0])
+
+                    steps_list.append(steps_per_rev)
+                except:
+                    pass
+            try:
+                motor.steps_per_rev = int(sum(steps_list)/len(steps_list))
+                logging.debug("calibrated %s to steps per revolution: %d",
+                              motor.name, motor.steps_per_rev, extra=extra)
+            except:
+                pass
 
 
 if __name__ == "__main__":
