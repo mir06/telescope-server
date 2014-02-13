@@ -176,12 +176,12 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
                     # get the status of the controller by status_code (small integer)
                     status_code = self._unpack_data(data, 'intle:16')
                     logging.debug("get status of controller, status code: %d", status_code)
-                    try:
-                        response = self.server.controller.get_status(status_code)
-                        self.request.sendall(response)
-                    except:
-                        logging.error('cannot get status of controller')
-                    break
+                    # try:
+                    response = self.server.controller.get_status(status_code)
+                    self.request.sendall(response)
+                    # except:
+                    #     logging.error('cannot get status of controller')
+                    # break
 
 
             else:

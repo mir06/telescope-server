@@ -28,7 +28,7 @@ class Motor(object):
         self.PUL, self.DIR, self.ENBL = pins
         self._steps_per_rev = 0
         self._enabled = True
-        self._angle = None
+        self._angle = 0
         self._min_angle = min_angle
         self._max_angle = max_angle
         self._steps = 0
