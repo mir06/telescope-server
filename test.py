@@ -23,7 +23,6 @@ def location(lon, lat, alt):
     data += ConstBitStream('floatle:32=%f' % (lon*ephem.degree))
     data += ConstBitStream('floatle:32=%f' % (lat*ephem.degree))
     data += ConstBitStream('floatle:32=%f' % alt)
-    data += ConstBitStream('int:%d=0' % (160-data.len))
     client(server, port, data)
 
 def start_calibration():
@@ -45,8 +44,12 @@ def set_angles(nr):
     data += ConstBitStream('intle:16=%d' % nr)
     client(server, port, data)
 
-def start(nr, on):
+def toggle_tracking():
     data = ConstBitStream('0x14000600')
-    data += ConstBitStream('intle:16=%d' % nr)
-    data += ConstBitStream('intle:16=%d' % on)
     client(server, port, data)
+
+def get_status(status_code):
+    data = ConstBitStream('0x14006300')
+    data += ConstBitStream('intle:16=%d' % status_code)
+    client(server, port, data)
+
