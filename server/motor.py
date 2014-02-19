@@ -1,3 +1,5 @@
+# -*- encoding: utf-8 -*-
+
 import time
 
 # if not running on raspberry just ignore
