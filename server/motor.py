@@ -35,6 +35,7 @@ class Motor(object):
         self._max_angle = max_angle
         self._steps = 0
         self._stop = False
+        self._delay = 0.01
         for p in pins:
             GPIO.setup(p, GPIO.OUT)
             GPIO.output(p, False)
@@ -95,6 +96,14 @@ class Motor(object):
     def stop(self, value):
         self._stop = value
 
+    @property
+    def delay(self):
+        return self._delay
+
+    @delay.setter
+    def delay(self, value):
+        self._delay = value
+
     def step(self, steps, direction):
         self._stop = False
         GPIO.output(self.DIR, direction)
@@ -109,7 +118,7 @@ class Motor(object):
             if self._steps_per_rev > 0:
                 self._angle += (direction-.5)*(720./self._steps_per_rev)
                 self._angle %= 360
-            time.sleep(.01)
+            time.sleep(self._delay)
 
     def move(self, angle):
         angle = angle % 360

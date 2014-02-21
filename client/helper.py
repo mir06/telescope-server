@@ -1,6 +1,6 @@
 
 import socket
-from bitstring import BitArray, BitStream, ConstBitStream
+from bitstring import ConstBitStream
 import ephem
 
 #server = 'rigel'
@@ -21,8 +21,8 @@ def client(ip, port, data):
 
 def location(lon, lat, alt):
     data = ConstBitStream('0x14000100')
-    data += ConstBitStream('floatle:32=%f' % (lon*ephem.degree))
-    data += ConstBitStream('floatle:32=%f' % (lat*ephem.degree))
+    data += ConstBitStream('floatle:32=%f' % lon)
+    data += ConstBitStream('floatle:32=%f' % lat)
     data += ConstBitStream('floatle:32=%f' % alt)
     client(server, port, data)
 
@@ -40,13 +40,20 @@ def step(az, alt):
     data += ConstBitStream('intle:16=%d' % alt)
     client(server, port, data)
 
-def set_angles(nr):
+def start_stop_motor(motor_id, action, direction):
     data = ConstBitStream('0x14000500')
+    data += ConstBitStream('intle:16=%d' % motor_id)
+    data += ConstBitStream('intle:16=%d' % action)
+    data += ConstBitStream('intle:16=%d' % direction)
+    client(server, port, data)
+
+def set_angles(nr):
+    data = ConstBitStream('0x14000600')
     data += ConstBitStream('intle:16=%d' % nr)
     client(server, port, data)
 
 def toggle_tracking():
-    data = ConstBitStream('0x14000600')
+    data = ConstBitStream('0x14000700')
     client(server, port, data)
 
 def get_status(status_code):

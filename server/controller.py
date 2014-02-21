@@ -12,6 +12,9 @@ from threading import Thread
 from datetime import datetime
 from time import sleep
 from itertools import combinations
+from sys import maxint
+import logging
+
 
 class Controller(BaseController):
     """
@@ -26,6 +29,7 @@ class Controller(BaseController):
     alt_pins = [18,20,19]
 
     def __init__(self):
+
         # initialize the motors
         self.motors = [
             Motor("Azimuth", self.az_pins),
@@ -48,6 +52,9 @@ class Controller(BaseController):
 
         # initialize angles/steps lists for calibration
         self._angles_steps = [[], []]
+
+        # initialize motor threads
+        self._motor_threads = [ None, None ]
 
         ######################## test #####################
         self._observer.lon = "16:00"
@@ -81,18 +88,40 @@ class Controller(BaseController):
     def calibrated(self):
         return all([ m.calibrated for m in self.motors ])
 
-    def _stop_motors(self):
+    def _set_step_delay(self, motor_index, delay):
         """
-        stop the motors if they are running
+        set the delay between motor steps
         """
-        for m in self.motors:
-            m.stop = True
+        self.motors[motor_index].delay = delay
+
+    def _start_motor(self, motor_index, direction):
+        """
+        start a motor with a given direction and infinite steps
+        """
+        logging.debug("start %s motor", self.motors[motor_index].name)
+        try:
+            self._motor_threads[motor_index].join()
+        except:
+            pass
+
+        self._motor_threads[motor_index] = Thread(target=self.motors[motor_index].step,
+                                                  args=[maxint, direction])
+        self._motor_threads[motor_index].start()
+
+    def _stop_motors(self, motors=[0,1]):
+        """
+        stop the given motors if they are running
+        """
+        for m in motors:
+            logging.debug("stop %s motor", self.motors[m].name)
+            self.motors[m].stop = True
 
     def _move_to(self, az, alt):
         """
         move to the position given by azimuth and altitude in degrees
         if there are other running moves wait till they are finished
         """
+        logging.debug("move to %f / %f", az, alt)
         try:
             for t in self._motor_threads:
                 t.join()
@@ -104,40 +133,28 @@ class Controller(BaseController):
         for t in self._motor_threads:
             t.start()
 
-    def _step_to(self, az_steps, alt_steps):
-        """
-        make threaded steps with both motors
-        """
-        try:
-            for t in self._motor_threads:
-                t.join()
-        except:
-            pass
-        zipped = zip(self.motors, [az_steps, alt_steps])
-        self._motor_threads = [ Thread(target=x[0].step, args=[abs(x[1]), x[1]>0]) for x in zipped ]
-
-        for t in self._motor_threads:
-            t.start()
-
     def _start_tracking(self):
         """
         start the tracking thread
         """
-        self._is_tracking = True
-        self._tracking_thread = Thread(target=self._do_tracking)
-        self._tracking_thread.start()
+        if not self._is_tracking:
+            logging.debug("start tracking")
+            self._is_tracking = True
+            self._tracking_thread = Thread(target=self._do_tracking)
+            self._tracking_thread.start()
 
     def _stop_tracking(self):
         """
         stop the tracking thread
         """
-        try:
-            self._stop_motors()
-            self._is_tracking = False
-            self._tracking_thread.join()
-            self._stop_motors()
-        except:
-            pass
+        if self._is_tracking:
+            logging.debug("stop tracking")
+            try:
+                self._stop_motors()
+                self._is_tracking = False
+                self._tracking_thread.join()
+            except:
+                pass
 
     def _do_tracking(self):
         """
@@ -172,6 +189,7 @@ class Controller(BaseController):
         get the ra and dec from stellarium, set the current time
         stop/start tracking
         """
+        logging.debug("goto: %f / %f", ra, dec)
         self._target._ra = "%f" % ra
         self._target._dec = "%f" % dec
         self._observer.date = datetime.utcnow()
@@ -191,7 +209,10 @@ class Controller(BaseController):
             self.motors[0].angle * ephem.degree,
             self.motors[1].angle * ephem.degree
             )
-        return ra/(15.*ephem.degree), dec/ephem.degree
+        ra /= (15.*ephem.degree)
+        dec /= ephem.degree
+        logging.debug("send: %f / %f", ra, dec)
+        return ra, dec
 
     def set_observer(self, lon, lat, alt):
         """
@@ -202,7 +223,10 @@ class Controller(BaseController):
         self._observer.lon = lon * ephem.degree
         self._observer.lat = lat * ephem.degree
         self._observer.elev = alt
-        return "OK"
+        logging.debug("set location %s / %s / %s",
+                      self._observer.lon,
+                      self._observer.lat,
+                      self._observer.elev)
 
     def start_calibration(self):
         """
@@ -212,12 +236,15 @@ class Controller(BaseController):
         set _is_calibrated to False
         reset the angles, steps and steps_per_rev of both motors
         """
+        logging.debug("start calibration")
+        if self._is_tracking:
+            self._stop_tracking()
+
         self._angles_steps = [[], []]
         for motor in self.motors:
             motor.angle = 0
             motor.steps = 0
             motor.steps_per_rev = 0
-        return "OK"
 
     def stop_calibration(self):
         """
@@ -228,6 +255,7 @@ class Controller(BaseController):
         list.
         if this is successful set the steps_per_rev for the motors
         """
+        logging.debug("stop calibration")
         for i in xrange(2):
             steps_list = []
             for comb in combinations(xrange(len(self._angles_steps[i])), 2):
@@ -247,7 +275,9 @@ class Controller(BaseController):
                 self.motors[i].steps_per_rev = int(median(steps_list))
             except:
                 pass
-        return "OK"
+        logging.debug("steps per revolution: %d / %d",
+                     self.motors[0].steps_per_rev,
+                     self.motors[1].steps_per_rev)
 
     def make_step(self, az_steps, alt_steps):
         """
@@ -259,6 +289,7 @@ class Controller(BaseController):
         """
         restart = self._is_tracking
         self._stop_tracking()
+        logging.debug("step motors: %d / %d", az_steps, alt_steps)
         self.motors[0].step(abs(az_steps), az_steps>0)
         self.motors[1].step(abs(alt_steps), alt_steps>0)
         if self.calibrated:
@@ -274,7 +305,21 @@ class Controller(BaseController):
 
         if restart:
             self._start_tracking()
-        return "OK"
+
+    def start_stop_motor(self, motor_id, action, direction):
+        """
+        implementation of start_stop_motor
+
+        motors will be started threaded and stopped by setting the stop-flag
+        motor will always be stopped before starting it if action==True
+        this can only be done during calibration (i.e. before the motors are calibrated)
+        """
+        if not self.calibrated:
+            self._stop_motors([motor_id])
+
+            if action:
+                # start the motor
+                self._start_motor(motor_id, direction)
 
 
     def set_object(self, object_id):
@@ -287,6 +332,7 @@ class Controller(BaseController):
         """
         try:
             obj = self._sky_objects[object_id]
+            logging.debug("mark %s", obj.name)
             self._observer.date = datetime.utcnow()
             obj.compute(self._observer)
             self.motors[0].angle = obj.az / ephem.degree
@@ -294,21 +340,20 @@ class Controller(BaseController):
             for i in xrange(2):
                 self._angles_steps[i].append((self.motors[i].angle, self.motors[i].steps))
         except:
-            pass
-        return "OK"
+            logging.debug("could not set coordinates of object nr. %d", object_id)
 
     def toggle_tracking(self):
         """
         implementation of toggle_tracking
         """
-        toggle = self._is_tracking
-        if toggle:
-            self._stop_tracking()
-            ret = "stopped tracking"
+        if self.calibrated:
+            toggle = self._is_tracking
+            if toggle:
+                self._stop_tracking()
+            else:
+                self._start_tracking()
         else:
-            self._start_tracking()
-            ret = "started tracking"
-        return ret
+            logging.error("cannot start tracking when not calibrated")
 
     def get_status(self, status_code):
         """

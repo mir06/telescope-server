@@ -105,36 +105,29 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
                 if mtype == 0:
                     # stellarium telescope client
                     ra, dec = self._unpack_stellarium(data)
-                    logging.info("goto ra: %12s, dec: %12s", ra, dec)
                     self.server.controller.goto(ra, dec)
 
                 elif mtype == 1:
                     # set observer lon/lat/alt given as three floats
                     lon, lat, alt = self._unpack_data(data, ['floatle:32']*3)
-                    logging.debug("location: %f / %f / %f", lon, lat, alt)
                     try:
-                        response = self.server.controller.set_observer(lon, lat, alt)
-                        self.request.sendall(response)
+                        self.server.controller.set_observer(lon, lat, alt)
                     except:
                         logging.error("could not set location")
                     break
 
                 elif mtype == 2:
                     # start calibration
-                    logging.debug("start calibration")
                     try:
-                        response = self.server.controller.start_calibration()
-                        self.request.sendall(response)
+                        self.server.controller.start_calibration()
                     except:
                         logging.error("cannot start calibration")
                     break
 
                 elif mtype == 3:
                     # stop calibration
-                    logging.debug("stop calibration")
                     try:
-                        response = self.server.controller.stop_calibration()
-                        self.request.sendall(response)
+                        self.server.controller.stop_calibration()
                     except:
                         logging.error("cannot stop calibration")
                     break
@@ -142,32 +135,36 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
                 elif mtype == 4:
                     # make steps (azimuthal/altitudal steps given as two small integers)
                     azimuth_steps, altitude_steps = self._unpack_data(data, ['intle:16']*2)
-                    logging.debug("az/alt-steps: %d / %d", azimuth_steps, altitude_steps)
                     try:
-                        response = self.server.controller.make_step(azimuth_steps, altitude_steps)
-                        self.request.sendall(response)
+                        self.server.controller.make_step(azimuth_steps, altitude_steps)
                     except:
                         logging.error("cannot make steps")
                     break
 
                 elif mtype == 5:
+                    # start or stop motor
+                    motor_id, action, direction = self._unpack_data(data, ['intle:16']*3)
+                    self.server.controller.start_stop_motor(motor_id, action, direction)
+                    # try:
+                    #     self.server.controller.start_stop_motor(motor_id, action, direction)
+                    # except:
+                    #     logging.error("could not %s motor %d", action and "start" or "stop", motor_id)
+                    break
+
+                elif mtype == 6:
                     # set the angle of the motors to given object_id (small integer)
                     # this shall be defined in the controller class
                     object_id = self._unpack_data(data, 'intle:16')
-                    logging.debug("set controller to object: %d", object_id)
                     try:
-                        response = self.server.controller.set_object(object_id)
-                        self.request.sendall(response)
+                        self.server.controller.set_object(object_id)
                     except:
                         logging.error("cannot set controller to given object")
                     break
 
-                elif mtype == 6:
+                elif mtype == 7:
                     # toggle tracking (earth rotation compensation)
-                    logging.debug("toggle tracking")
                     try:
-                        response = self.server.controller.toggle_tracking()
-                        self.request.sendall(response)
+                        self.server.controller.toggle_tracking()
                     except:
                         logging.error("cannot toggle tracking")
                     break
@@ -175,20 +172,18 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
                 elif mtype == 99:
                     # get the status of the controller by status_code (small integer)
                     status_code = self._unpack_data(data, 'intle:16')
-                    logging.debug("get status of controller, status code: %d", status_code)
-                    # try:
-                    response = self.server.controller.get_status(status_code)
-                    self.request.sendall(response)
-                    # except:
-                    #     logging.error('cannot get status of controller')
-                    # break
+                    try:
+                        response = self.server.controller.get_status(status_code)
+                        self.request.sendall(response)
+                    except:
+                         logging.error('cannot get status of controller')
+                    break
 
 
             else:
                 # send current position
                 ra, dec = self.server.controller.current_pos()
                 sdata = self._pack_stellarium(ra, dec)
-                logging.info("sending data: ra: %12s, dec: %12s", ra, dec)
                 try:
                     self.request.send(sdata.bytes)
                 except:

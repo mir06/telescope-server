@@ -21,22 +21,25 @@ class BaseController(object):
         return self._ra, self._dec
 
     def set_observer(self, lon, lat, alt):
-        return ""
+        pass
 
     def start_calibration(self):
-        return ""
+        pass
 
     def stop_calibration(self):
-        return ""
+        pass
 
     def make_step(self, az, alt):
-        return ""
+        pass
+
+    def start_stop_motor(self, motor_id, action, direction):
+        pass
 
     def set_object(self, object_id):
-        return ""
+        pass
 
     def toggle_tracking(self):
-        return ""
+        pass
 
     def get_status(self, status_code):
         return "everything's fine"
