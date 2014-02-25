@@ -15,6 +15,9 @@ from itertools import combinations
 from sys import maxint
 import logging
 
+import sys
+sys.path.append("../common")
+from protocol import status
 
 class Controller(BaseController):
     """
@@ -57,10 +60,6 @@ class Controller(BaseController):
         self._motor_threads = [ None, None ]
 
         ######################## test #####################
-        self._observer.lon = "16:00"
-        self._observer.lat = "47:23"
-        self._observer.elev = 360
-
         self.motors[0].steps_per_rev = 4000
         self.motors[1].steps_per_rev = 4000
 
@@ -361,25 +360,25 @@ class Controller(BaseController):
 
         see code what is returned
         """
-        if status_code == 1:
+        if status_code == status.LOCATION:
             return self.location
-        elif status_code == 2:
+        elif status_code == status.RADEC:
             return self.target
-        elif status_code == 3:
+        elif status_code == status.AZALT:
             return "%s / %s" % (self.azimuth, self.altitude)
-        elif status_code == 4:
+        elif status_code == status.CALIBRATED:
             return "calibrated: %s" % (self.calibrated and "YES" or "NO")
-        elif status_code == 5:
+        elif status_code == status.TRACKING:
             return "tracking: %s" % (self._is_tracking and "YES" or "NO")
-        elif status_code == 10:
-            return "steps per revolution (az/alt): %d/%d" % tuple([m.steps_per_rev for m in self.motors])
-        elif status_code == 11:
+        elif status_code == status.SPR:
+            return "steps per revolution (az/alt): %d / %d" % tuple([m.steps_per_rev for m in self.motors])
+        elif status_code == status.AZ_ANGLES:
             return "angles/steps list for azimuth motor: %s" % self._angles_steps[0]
-        elif status_code == 12:
+        elif status_code == status.ALT_ANGLES:
             return "angles/steps list for altitude motor: %s" % self._angles_steps[1]
-        elif status_code == 20:
-            return "current steps (az/alt): %d/%d" % (self.motors[0].steps, self.motors[1].steps)
-        elif status_code == 30:
+        elif status_code == status.CURR_STEPS:
+            return "current steps (az/alt): %d / %d" % (self.motors[0].steps, self.motors[1].steps)
+        elif status_code == status.VISIBLE_OBJ:
             return self._visible_objects()
         else:
             return "status code %d not defined" % status_code

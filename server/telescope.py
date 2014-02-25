@@ -17,6 +17,9 @@ from string import replace
 from time import time, sleep
 from bitstring import ConstBitStream
 
+sys.path.append("../common")
+from protocol import command, status
+
 def getopts():
     parser = argparse.ArgumentParser(description="Telescope Server")
     parser.add_argument("--host", default="0.0.0.0")
@@ -102,12 +105,12 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
                 msize = data.read('intle:16')
                 mtype = data.read('intle:16')
 
-                if mtype == 0:
+                if mtype == command.STELLARIUM:
                     # stellarium telescope client
                     ra, dec = self._unpack_stellarium(data)
                     self.server.controller.goto(ra, dec)
 
-                elif mtype == 1:
+                elif mtype == command.LOCATION:
                     # set observer lon/lat/alt given as three floats
                     lon, lat, alt = self._unpack_data(data, ['floatle:32']*3)
                     try:
@@ -116,7 +119,7 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
                         logging.error("could not set location")
                     break
 
-                elif mtype == 2:
+                elif mtype == command.START_CAL:
                     # start calibration
                     try:
                         self.server.controller.start_calibration()
@@ -124,7 +127,7 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
                         logging.error("cannot start calibration")
                     break
 
-                elif mtype == 3:
+                elif mtype == command.STOP_CAL:
                     # stop calibration
                     try:
                         self.server.controller.stop_calibration()
@@ -132,7 +135,7 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
                         logging.error("cannot stop calibration")
                     break
 
-                elif mtype == 4:
+                elif mtype == command.MAKE_STEP:
                     # make steps (azimuthal/altitudal steps given as two small integers)
                     azimuth_steps, altitude_steps = self._unpack_data(data, ['intle:16']*2)
                     try:
@@ -141,7 +144,7 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
                         logging.error("cannot make steps")
                     break
 
-                elif mtype == 5:
+                elif mtype == command.START_MOT:
                     # start or stop motor
                     motor_id, action, direction = self._unpack_data(data, ['intle:16']*3)
                     self.server.controller.start_stop_motor(motor_id, action, direction)
@@ -151,7 +154,7 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
                     #     logging.error("could not %s motor %d", action and "start" or "stop", motor_id)
                     break
 
-                elif mtype == 6:
+                elif mtype == command.SET_ANGLE:
                     # set the angle of the motors to given object_id (small integer)
                     # this shall be defined in the controller class
                     object_id = self._unpack_data(data, 'intle:16')
@@ -161,7 +164,7 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
                         logging.error("cannot set controller to given object")
                     break
 
-                elif mtype == 7:
+                elif mtype == command.TOGGLE_TRACK:
                     # toggle tracking (earth rotation compensation)
                     try:
                         self.server.controller.toggle_tracking()
@@ -169,7 +172,7 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
                         logging.error("cannot toggle tracking")
                     break
 
-                elif mtype == 99:
+                elif mtype == command.STATUS:
                     # get the status of the controller by status_code (small integer)
                     status_code = self._unpack_data(data, 'intle:16')
                     try:
