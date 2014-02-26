@@ -9,6 +9,7 @@ import os
 import sys
 try:
     from gi.repository import Gtk
+    from gi.repository import GdkPixbuf
 except:
     sys.exit(1)
 
@@ -152,6 +153,18 @@ class Client(object):
         # show the main window
         self.glade.get_object("main_window").show_all()
 
+        # images / animations for buttons
+        self.button_images = dict()
+        for direction in ['right', 'left', 'up', 'down']:
+            im = Gtk.Image()
+            im.set_from_file("ui/%s-animated.gif" % direction)
+            im.show()
+            self.button_images[direction] = dict()
+            self.button_images[direction]["stopped"] = self.glade.get_object("%s_arrow" % direction)
+            self.button_images[direction]["started"] = im
+
+        # initialize state variables
+        self.movement = [ "", "" ]
 
     def check_tracking(self):
         """
@@ -241,7 +254,11 @@ class Client(object):
             if name not in name_list:
                 self.location_store.append([name, lon, lat, alt])
                 if name == self.active_location:
-                    self.connection.set_location(lon, lat, alt)
+                    # try to set the location (if there is no server just leave it)
+                    try:
+                        self.connection.set_location(lon, lat, alt)
+                    except:
+                        pass
                     # set the active row (must be last line of name_list at this moment)
                     self.location_tree.set_cursor(len(name_list))
                 name_list.append(name)
@@ -385,7 +402,11 @@ class Client(object):
         pass
 
     def onInfoDialog(self, widget, data=None):
+        """
+        get information of the telescope server
+        """
         dialog = self.glade.get_object("info_dialog")
+
         # get information from the server
         try:
             location = self.connection.get_location()
@@ -434,6 +455,40 @@ class Client(object):
         tracking = self.connection.get_tracking_status()
         if switch.get_active() != tracking:
             self.connection.toggle_tracking()
+
+    def onNavigation(self, button, event):
+        """
+        control the motors manually by button-clicks
+        """
+        name = Gtk.Buildable.get_name(button)
+        index = name in ["right", "left"]
+        # right click starts/stops motor
+        # left click does one step (and stops running motor)
+        if event.button == 3:
+            # if running in this direction just stop the motor
+            # otherwise start the motor in this direction
+            if self.movement[index] == name:
+                self.movement[index] = ""
+                print "stopping motor %s" % name
+                button.set_image(self.button_images[name]['stopped'])
+            else:
+                self.movement[index] = name
+                print "starting motor %s" % name
+                button.set_image(self.button_images[name]['started'])
+                button.size_request()
+
+
+        elif event.button == 1:
+            # if motor is running stop it
+            # else make one step in this direction
+            if self.movement[index] != "":
+                self.movement[index] = ""
+                print "stopping motor %s" % name
+            else:
+                print "stepping motor %s" % name
+
+
+
 
 if __name__ == "__main__":
     client = Client()

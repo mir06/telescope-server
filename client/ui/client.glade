@@ -162,7 +162,6 @@
   <object class="GtkImage" id="down_arrow">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
-    <property name="ypad">9</property>
     <property name="pixbuf">down.png</property>
   </object>
   <object class="GtkDialog" id="info_dialog">
@@ -851,10 +850,9 @@
     </action-widgets>
   </object>
   <object class="GtkWindow" id="main_window">
-    <property name="width_request">512</property>
-    <property name="height_request">256</property>
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">Telescope Control</property>
+    <property name="resizable">False</property>
     <signal name="delete-event" handler="onDeleteWindow" swapped="no"/>
     <child>
       <object class="GtkBox" id="v_box">
@@ -992,13 +990,12 @@
             <property name="column_homogeneous">True</property>
             <child>
               <object class="GtkButton" id="right">
-                <property name="width_request">64</property>
-                <property name="height_request">64</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="tooltip_text" translatable="yes">double click for continuous movement</property>
+                <property name="tooltip_text" translatable="yes">right click for continuous movement</property>
                 <property name="image">right_arrow</property>
+                <signal name="button-press-event" handler="onNavigation" swapped="no"/>
               </object>
               <packing>
                 <property name="left_attach">2</property>
@@ -1009,13 +1006,12 @@
             </child>
             <child>
               <object class="GtkButton" id="down">
-                <property name="width_request">64</property>
-                <property name="height_request">64</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="tooltip_text" translatable="yes">double click for continuous movement</property>
+                <property name="tooltip_text" translatable="yes">right click for continuous movement</property>
                 <property name="image">down_arrow</property>
+                <signal name="button-press-event" handler="onNavigation" swapped="no"/>
               </object>
               <packing>
                 <property name="left_attach">1</property>
@@ -1026,13 +1022,12 @@
             </child>
             <child>
               <object class="GtkButton" id="up">
-                <property name="width_request">64</property>
-                <property name="height_request">64</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="tooltip_text" translatable="yes">double click for continuous movement</property>
+                <property name="tooltip_text" translatable="yes">right click for continuous movement</property>
                 <property name="image">up_arrow</property>
+                <signal name="button-press-event" handler="onNavigation" swapped="no"/>
               </object>
               <packing>
                 <property name="left_attach">1</property>
@@ -1043,13 +1038,12 @@
             </child>
             <child>
               <object class="GtkButton" id="left">
-                <property name="width_request">64</property>
-                <property name="height_request">64</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="tooltip_text" translatable="yes">double click for continuous movement</property>
+                <property name="tooltip_text" translatable="yes">right click for continuous movement</property>
                 <property name="image">left_arrow</property>
+                <signal name="button-press-event" handler="onNavigation" swapped="no"/>
               </object>
               <packing>
                 <property name="left_attach">0</property>
