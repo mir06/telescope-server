@@ -313,12 +313,21 @@ class Controller(BaseController):
         motor will always be stopped before starting it if action==True
         this can only be done during calibration (i.e. before the motors are calibrated)
         """
-        if not self.calibrated:
-            self._stop_motors([motor_id])
+        # if not self.calibrated:
+        self._stop_motors([motor_id])
 
-            if action:
-                # start the motor
-                self._start_motor(motor_id, direction)
+        if action:
+            # start the motor
+            self._start_motor(motor_id, direction)
+        else:
+            # recalculate target position (just in case of tracking)
+            if self.calibrated:
+                self._observer.date = datetime.utcnow()
+                self._target._ra, self._target._dec = \
+                  self._observer.radec_of(
+                        self.motors[0].angle * ephem.degree,
+                        self.motors[1].angle * ephem.degree
+                        )
 
 
     def set_object(self, object_id):
