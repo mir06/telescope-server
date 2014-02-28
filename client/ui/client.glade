@@ -1,6 +1,321 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
   <!-- interface-requires gtk+ 3.0 -->
+  <object class="GtkDialog" id="calib_dialog">
+    <property name="can_focus">False</property>
+    <property name="border_width">5</property>
+    <property name="title" translatable="yes">Calibrate telescope</property>
+    <property name="type_hint">dialog</property>
+    <signal name="key-release-event" handler="onCursorReleased" swapped="no"/>
+    <signal name="key-press-event" handler="onCursorPressed" swapped="no"/>
+    <child internal-child="vbox">
+      <object class="GtkBox" id="dialog-vbox5">
+        <property name="can_focus">False</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">2</property>
+        <child internal-child="action_area">
+          <object class="GtkButtonBox" id="dialog-action_area5">
+            <property name="can_focus">False</property>
+            <property name="layout_style">end</property>
+            <child>
+              <placeholder/>
+            </child>
+            <child>
+              <object class="GtkButton" id="calibration_close">
+                <property name="label">gtk-close</property>
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="receives_default">True</property>
+                <property name="use_stock">True</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="pack_type">end</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkFrame" id="calibration_frame">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="label_xalign">0</property>
+            <property name="shadow_type">in</property>
+            <child>
+              <object class="GtkAlignment" id="alignment3">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="bottom_padding">12</property>
+                <property name="left_padding">12</property>
+                <property name="right_padding">12</property>
+                <child>
+                  <object class="GtkBox" id="box3">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">12</property>
+                    <child>
+                      <object class="GtkBox" id="box5">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <child>
+                          <object class="GtkGrid" id="navigation1">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="halign">center</property>
+                            <property name="valign">center</property>
+                            <property name="row_spacing">6</property>
+                            <property name="column_spacing">6</property>
+                            <property name="row_homogeneous">True</property>
+                            <property name="column_homogeneous">True</property>
+                            <child>
+                              <object class="GtkButton" id="calib_right">
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="receives_default">True</property>
+                                <property name="has_tooltip">True</property>
+                                <property name="tooltip_markup" translatable="yes">right click for continuous movement</property>
+                                <property name="tooltip_text" translatable="yes">right click for continuous movement</property>
+                                <property name="image">calib_right_arrow</property>
+                                <signal name="button-press-event" handler="onNavigation" swapped="no"/>
+                              </object>
+                              <packing>
+                                <property name="left_attach">2</property>
+                                <property name="top_attach">1</property>
+                                <property name="width">1</property>
+                                <property name="height">1</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="calib_down">
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="receives_default">True</property>
+                                <property name="has_tooltip">True</property>
+                                <property name="tooltip_markup" translatable="yes">right click for continuous movement</property>
+                                <property name="tooltip_text" translatable="yes">right click for continuous movement</property>
+                                <property name="image">calib_down_arrow</property>
+                                <signal name="button-press-event" handler="onNavigation" swapped="no"/>
+                              </object>
+                              <packing>
+                                <property name="left_attach">1</property>
+                                <property name="top_attach">2</property>
+                                <property name="width">1</property>
+                                <property name="height">1</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="calib_up">
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="receives_default">True</property>
+                                <property name="has_tooltip">True</property>
+                                <property name="tooltip_markup" translatable="yes">right click for continuous movement</property>
+                                <property name="tooltip_text" translatable="yes">right click for continuous movement</property>
+                                <property name="image">calib_up_arrow</property>
+                                <signal name="button-press-event" handler="onNavigation" swapped="no"/>
+                              </object>
+                              <packing>
+                                <property name="left_attach">1</property>
+                                <property name="top_attach">0</property>
+                                <property name="width">1</property>
+                                <property name="height">1</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="calib_left">
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="receives_default">True</property>
+                                <property name="has_tooltip">True</property>
+                                <property name="tooltip_markup" translatable="yes">right click for continuous movement</property>
+                                <property name="tooltip_text" translatable="yes">right click for continuous movement</property>
+                                <property name="image">calib_left_arrow</property>
+                                <signal name="button-press-event" handler="onNavigation" swapped="no"/>
+                              </object>
+                              <packing>
+                                <property name="left_attach">0</property>
+                                <property name="top_attach">1</property>
+                                <property name="width">1</property>
+                                <property name="height">1</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <placeholder/>
+                            </child>
+                            <child>
+                              <placeholder/>
+                            </child>
+                            <child>
+                              <placeholder/>
+                            </child>
+                            <child>
+                              <placeholder/>
+                            </child>
+                            <child>
+                              <object class="GtkLabel" id="calibration_points">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="has_tooltip">True</property>
+                                <property name="tooltip_text" translatable="yes">Number of currently sighted stars</property>
+                                <property name="label" translatable="yes">&lt;b&gt;&lt;big&gt;0&lt;/big&gt;&lt;/b&gt;</property>
+                                <property name="use_markup">True</property>
+                                <property name="justify">center</property>
+                              </object>
+                              <packing>
+                                <property name="left_attach">1</property>
+                                <property name="top_attach">1</property>
+                                <property name="width">1</property>
+                                <property name="height">1</property>
+                              </packing>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">False</property>
+                            <property name="padding">12</property>
+                            <property name="position">0</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkFrame" id="calib_objects">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="tooltip_text" translatable="yes">When telescope points to the object press the according button</property>
+                            <property name="label_xalign">0</property>
+                            <property name="shadow_type">none</property>
+                            <child>
+                              <object class="GtkAlignment" id="alignment7">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="left_padding">12</property>
+                                <child>
+                                  <placeholder/>
+                                </child>
+                              </object>
+                            </child>
+                            <child type="label">
+                              <object class="GtkLabel" id="calib_objects_label">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="label" translatable="yes">&lt;b&gt;Objects&lt;/b&gt;</property>
+                                <property name="use_markup">True</property>
+                              </object>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">1</property>
+                          </packing>
+                        </child>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkBox" id="calibration_edit">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="halign">center</property>
+                        <property name="spacing">12</property>
+                        <property name="homogeneous">True</property>
+                        <child>
+                          <object class="GtkButton" id="calibration_start">
+                            <property name="label">gtk-clear</property>
+                            <property name="visible">True</property>
+                            <property name="can_focus">True</property>
+                            <property name="receives_default">True</property>
+                            <property name="has_tooltip">True</property>
+                            <property name="tooltip_text" translatable="yes">Discard calibration and restart</property>
+                            <property name="use_stock">True</property>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">0</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="calibration_stop">
+                            <property name="label">gtk-apply</property>
+                            <property name="visible">True</property>
+                            <property name="can_focus">True</property>
+                            <property name="receives_default">True</property>
+                            <property name="has_tooltip">True</property>
+                            <property name="tooltip_text" translatable="yes">Apply calibration</property>
+                            <property name="use_stock">True</property>
+                            <signal name="clicked" handler="onCalibrationStop" swapped="no"/>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">1</property>
+                          </packing>
+                        </child>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">False</property>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child type="label">
+              <object class="GtkLabel" id="calibration_label">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">&lt;b&gt;Calibration&lt;/b&gt;</property>
+                <property name="use_markup">True</property>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+    <action-widgets>
+      <action-widget response="1">calibration_close</action-widget>
+    </action-widgets>
+  </object>
+  <object class="GtkImage" id="calib_down_arrow">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="pixbuf">down.png</property>
+  </object>
+  <object class="GtkImage" id="calib_left_arrow">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="pixbuf">left.png</property>
+  </object>
+  <object class="GtkImage" id="calib_right_arrow">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="pixbuf">right.png</property>
+    <property name="icon-size">3</property>
+  </object>
+  <object class="GtkImage" id="calib_up_arrow">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="pixbuf">up.png</property>
+  </object>
   <object class="GtkDialog" id="connection_dialog">
     <property name="can_focus">False</property>
     <property name="border_width">5</property>
@@ -158,11 +473,6 @@
       <action-widget response="0">connection_connect</action-widget>
       <action-widget response="1">connection_cancel</action-widget>
     </action-widgets>
-  </object>
-  <object class="GtkImage" id="down_arrow">
-    <property name="visible">True</property>
-    <property name="can_focus">False</property>
-    <property name="pixbuf">down.png</property>
   </object>
   <object class="GtkDialog" id="info_dialog">
     <property name="can_focus">False</property>
@@ -581,11 +891,6 @@
       <action-widget response="1">info_close</action-widget>
     </action-widgets>
   </object>
-  <object class="GtkImage" id="left_arrow">
-    <property name="visible">True</property>
-    <property name="can_focus">False</property>
-    <property name="pixbuf">left.png</property>
-  </object>
   <object class="GtkListStore" id="liststore_location">
     <columns>
       <!-- column-name Name -->
@@ -849,13 +1154,35 @@
       <action-widget response="1">location_cancel</action-widget>
     </action-widgets>
   </object>
+  <object class="GtkImage" id="main_down_arrow">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="pixbuf">down.png</property>
+  </object>
+  <object class="GtkImage" id="main_left_arrow">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="pixbuf">left.png</property>
+  </object>
+  <object class="GtkImage" id="main_right_arrow">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="pixbuf">right.png</property>
+    <property name="icon-size">3</property>
+  </object>
+  <object class="GtkImage" id="main_up_arrow">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="yalign">0.40999999642372131</property>
+    <property name="pixbuf">up.png</property>
+  </object>
   <object class="GtkWindow" id="main_window">
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">Telescope Control</property>
     <property name="resizable">False</property>
-    <signal name="delete-event" handler="onDeleteWindow" swapped="no"/>
-    <signal name="key-press-event" handler="onCursorPressed" swapped="no"/>
     <signal name="key-release-event" handler="onCursorReleased" swapped="no"/>
+    <signal name="key-press-event" handler="onCursorPressed" swapped="no"/>
+    <signal name="delete-event" handler="onDeleteWindow" swapped="no"/>
     <child>
       <object class="GtkBox" id="v_box">
         <property name="visible">True</property>
@@ -914,6 +1241,7 @@
                 <property name="label" translatable="yes">Calibrate telescope</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">gtk-properties</property>
+                <signal name="clicked" handler="onCalibrationDialog" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -991,12 +1319,12 @@
             <property name="row_homogeneous">True</property>
             <property name="column_homogeneous">True</property>
             <child>
-              <object class="GtkButton" id="right">
+              <object class="GtkButton" id="main_right">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
                 <property name="tooltip_text" translatable="yes">right click for continuous movement</property>
-                <property name="image">right_arrow</property>
+                <property name="image">main_right_arrow</property>
                 <signal name="button-press-event" handler="onNavigation" swapped="no"/>
               </object>
               <packing>
@@ -1007,12 +1335,12 @@
               </packing>
             </child>
             <child>
-              <object class="GtkButton" id="down">
+              <object class="GtkButton" id="main_down">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
                 <property name="tooltip_text" translatable="yes">right click for continuous movement</property>
-                <property name="image">down_arrow</property>
+                <property name="image">main_down_arrow</property>
                 <signal name="button-press-event" handler="onNavigation" swapped="no"/>
               </object>
               <packing>
@@ -1023,12 +1351,12 @@
               </packing>
             </child>
             <child>
-              <object class="GtkButton" id="up">
+              <object class="GtkButton" id="main_up">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
                 <property name="tooltip_text" translatable="yes">right click for continuous movement</property>
-                <property name="image">up_arrow</property>
+                <property name="image">main_up_arrow</property>
                 <signal name="button-press-event" handler="onNavigation" swapped="no"/>
               </object>
               <packing>
@@ -1039,12 +1367,12 @@
               </packing>
             </child>
             <child>
-              <object class="GtkButton" id="left">
+              <object class="GtkButton" id="main_left">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
                 <property name="tooltip_text" translatable="yes">right click for continuous movement</property>
-                <property name="image">left_arrow</property>
+                <property name="image">main_left_arrow</property>
                 <signal name="button-press-event" handler="onNavigation" swapped="no"/>
               </object>
               <packing>
@@ -1137,16 +1465,5 @@
     <property name="value">10000</property>
     <property name="step_increment">1</property>
     <property name="page_increment">10</property>
-  </object>
-  <object class="GtkImage" id="right_arrow">
-    <property name="visible">True</property>
-    <property name="can_focus">False</property>
-    <property name="pixbuf">right.png</property>
-    <property name="icon-size">3</property>
-  </object>
-  <object class="GtkImage" id="up_arrow">
-    <property name="visible">True</property>
-    <property name="can_focus">False</property>
-    <property name="pixbuf">up.png</property>
   </object>
 </interface>

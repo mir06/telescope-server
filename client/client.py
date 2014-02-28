@@ -89,6 +89,14 @@ class Connector(object):
         response = self.get_status(status.SPR)
         return response.split(':')[-1]
 
+    def get_visible_objects(self):
+        response = self.get_status(status.VISIBLE_OBJ)
+        return response.split(',')
+
+    def get_number_of_sighted_objects(self):
+        response = self.get_status(status.SIGHTED_OBJ)
+        return response
+
     def set_location(self, lon, lat, alt):
         data = ConstBitStream('0x1400')
         data += ConstBitStream('intle:16=%d' % command.LOCATION)
@@ -169,19 +177,22 @@ class Client(object):
         self.glade.get_object("main_window").show_all()
 
         # images / animations for buttons
-        self.navigation_buttons = dict()
-        self.button_images = dict()
+        self.navigation_buttons = {'main': {}, 'calib': {}}
+        self.button_images = {'main': {}, 'calib': {}}
         for direction in ['right', 'left', 'up', 'down']:
             # buttons
-            self.navigation_buttons[direction] = self.glade.get_object(direction)
+            for window in self.navigation_buttons.keys():
+                self.navigation_buttons[window][direction] = \
+                  self.glade.get_object("%s_%s" % (window,direction))
 
-            # images (fixed and animated icons)
-            im = Gtk.Image()
-            im.set_from_file("ui/%s-animated.gif" % direction)
-            im.show()
-            self.button_images[direction] = dict()
-            self.button_images[direction]["stopped"] = self.glade.get_object("%s_arrow" % direction)
-            self.button_images[direction]["started"] = im
+                # images (fixed and animated icons)
+                im = Gtk.Image()
+                im.set_from_file("ui/%s-animated.gif" % direction)
+                im.show()
+                self.button_images[window][direction] = dict()
+                self.button_images[window][direction]["stopped"] = \
+                  self.glade.get_object("%s_%s_arrow" % (window,direction))
+                self.button_images[window][direction]["started"] = im
 
         # initialize state variables
         self.movement = [ "", "" ]
@@ -422,8 +433,28 @@ class Client(object):
         self.check_widgets()
         dialog.hide()
 
-    def onCalibrationDialog(self, widget, data=None):
+    def onCalibrationStart(self, button):
         pass
+
+    def onCalibrationStop(self, button):
+        pass
+
+    def onCalibrationDialog(self, widget, data=None):
+        # stop eventually running motors
+        self._start_stop_motor('main', 'right', force_stop=True)
+        self._start_stop_motor('main', 'up', force_stop=True)
+
+        # fill the objects' box with visible objects
+        print self.connection.get_visible_objects()
+
+        # update number of sighted objects
+        print self.connection.get_number_of_sighted_objects()
+
+        # show the dialog
+        dialog = self.glade.get_object("calib_dialog")
+        response = dialog.run()
+        dialog.hide()
+
 
     def onInfoDialog(self, widget, data=None):
         """
@@ -493,22 +524,25 @@ class Client(object):
         except:
             return 1,direction=="up",alt[alt.index(direction)-1]
 
-    def _start_stop_motor(self, direction, force_stop=False, cont=False):
+    def _start_stop_motor(self, window, direction, force_stop=False, cont=False):
         """
         start and stop motors depending on current state
-        can be overruled by optional paramters:
+        can be overruled by optional paramters
+        and set the according images on the buttons
+        parameters:
           force_stop: stop motor if it's running
           cont:       do not stop motor if it's already running in this direction
         """
-        # set button images
+        # translate simple direction into motor-number, boolean direction
+        # and the opposite direction
         index, bool_dir, other_dir = self._translate_direction(direction)
 
         # stop a motor if it's running
         if force_stop:
             if self.movement[index] != "":
                 self.movement[index] = ""
-                self.navigation_buttons[direction].set_image(self.button_images[direction]['stopped'])
-                self.navigation_buttons[other_dir].set_image(self.button_images[other_dir]['stopped'])
+                self.navigation_buttons[window][direction].set_image(self.button_images[window][direction]['stopped'])
+                self.navigation_buttons[window][other_dir].set_image(self.button_images[window][other_dir]['stopped'])
                 self.connection.start_stop_motor(index, False)
                 return True
             else:
@@ -517,13 +551,13 @@ class Client(object):
         # start or stop a motor depending on the direction it is currently running
         if self.movement[index] != direction:
             self.movement[index] = direction
-            self.navigation_buttons[direction].set_image(self.button_images[direction]['started'])
-            self.navigation_buttons[other_dir].set_image(self.button_images[other_dir]['stopped'])
+            self.navigation_buttons[window][direction].set_image(self.button_images[window][direction]['started'])
+            self.navigation_buttons[window][other_dir].set_image(self.button_images[window][other_dir]['stopped'])
             self.connection.start_stop_motor(index, True, bool_dir)
         else:
             if not cont:
                 self.movement[index] = ""
-                self.navigation_buttons[direction].set_image(self.button_images[direction]['stopped'])
+                self.navigation_buttons[window][direction].set_image(self.button_images[window][direction]['stopped'])
                 self.connection.start_stop_motor(index, False)
         return True
 
@@ -532,14 +566,14 @@ class Client(object):
         """
         control the motors manually by button-clicks
         """
-        direction = Gtk.Buildable.get_name(button)
+        window, direction = Gtk.Buildable.get_name(button).split('_')
         # right click starts/stops motor
         # left click does one step (and stops running motor)
         if event.button == 3:
-            self._start_stop_motor(direction)
+            self._start_stop_motor(window, direction)
 
         elif event.button == 1:
-            if not self._start_stop_motor(direction, force_stop=True):
+            if not self._start_stop_motor(window, direction, force_stop=True):
                 index, bool_dir, other_dir = self._translate_direction(direction)
                 self.connection.make_step(index, bool_dir)
 
@@ -547,14 +581,11 @@ class Client(object):
         """
         control motors by cursor keys (only react when navigation is enabled)
         """
+        window = Gtk.Buildable.get_name(widget).split('_')[0]
         if self.navigation.get_sensitive():
             if event.keyval in self.direction_key.values():
                 direction = self.key_direction[event.keyval]
-                self._start_stop_motor(direction, cont=True)
-                # index = direction in ["right", "left"]
-                # if self.movement[index] != direction:
-                #     self.movement[index] = direction
-                #     print "start motor %s" % direction
+                self._start_stop_motor(window, direction, cont=True)
 
         return True
 
@@ -562,14 +593,12 @@ class Client(object):
         """
         stop motors when cursur keys are released
         """
+        window = Gtk.Buildable.get_name(widget).split('_')[0]
         if self.navigation.get_sensitive():
             if event.keyval in self.direction_key.values():
                 direction = self.key_direction[event.keyval]
                 index = direction in ["right", "left"]
-                self._start_stop_motor(direction)
-                # if self.movement[index] == direction:
-                #     self.movement[index] = ""
-                #     print "stop motor %s" % direction
+                self._start_stop_motor(window, direction)
 
         return True
 

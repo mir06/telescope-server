@@ -24,6 +24,7 @@ class status:
     SPR         = 10
     AZ_ANGLES   = 11
     ALT_ANGLES  = 12
+    SIGHTED_OBJ = 13
     CURR_STEPS  = 20
     VISIBLE_OBJ = 30
 

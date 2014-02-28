@@ -385,6 +385,8 @@ class Controller(BaseController):
             return "angles/steps list for azimuth motor: %s" % self._angles_steps[0]
         elif status_code == status.ALT_ANGLES:
             return "angles/steps list for altitude motor: %s" % self._angles_steps[1]
+        elif status_code == status.SIGHTED_OBJ:
+            return "%d" % len(self._angles_steps[0])
         elif status_code == status.CURR_STEPS:
             return "current steps (az/alt): %d / %d" % (self.motors[0].steps, self.motors[1].steps)
         elif status_code == status.VISIBLE_OBJ:
