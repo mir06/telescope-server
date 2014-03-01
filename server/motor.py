@@ -25,7 +25,7 @@ GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
 
 class Motor(object):
-    def __init__(self, name, pins, min_angle=-361, max_angle=360):
+    def __init__(self, name, pins, min_angle=-5, max_angle=365):
         self.name = name
         self.PUL, self.DIR, self.ENBL = pins
         self._steps_per_rev = 0

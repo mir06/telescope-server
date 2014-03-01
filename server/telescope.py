@@ -94,13 +94,13 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
         logging.debug("connection established from %s", self.client_address[0])
         while True:
             data0 = ''
-            self.request.setblocking(0)
+
+            # set the socket time-out
+            # if nothing is received within this time just send data to the
+            # stellarium server
+            self.request.settimeout(.01)
             try:
                 data0 = self.request.recv(160)
-            except SocketServer.socket.error, e:
-                pass
-
-            if data0:
                 data = ConstBitStream(bytes=data0, length=160)
                 msize = data.read('intle:16')
                 mtype = data.read('intle:16')
@@ -182,8 +182,8 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
                          logging.error('cannot get status of controller')
                     break
 
-
-            else:
+            except:
+                # no data received
                 # send current position
                 ra, dec = self.server.controller.current_pos()
                 sdata = self._pack_stellarium(ra, dec)
@@ -191,7 +191,6 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
                     self.request.send(sdata.bytes)
                 except:
                     pass
-                sleep(.5)
 
 
 class TelescopeServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):

@@ -52,6 +52,8 @@ class Controller(BaseController):
 
         # set boolean variable indicating tracking
         self._is_tracking = False
+        self.restart = [False, False]
+        self.running = [False, False]
 
         # initialize angles/steps lists for calibration
         self._angles_steps = [[], []]
@@ -293,17 +295,14 @@ class Controller(BaseController):
         self.motors[1].step(abs(alt_steps), alt_steps>0)
         if self.calibrated:
             self._observer.date = datetime.utcnow()
-            self._target.compute(self._observer)
             self._target._ra, self._target._dec = \
               self._observer.radec_of(
-                  self._target.az + \
-                  az_steps*ephem.twopi/self.motors[0].steps_per_rev,
-                  self._target.alt + \
-                  alt_steps*ephem.twopi/self.motors[1].steps_per_rev
+                    self.motors[0].angle * ephem.degree,
+                    self.motors[1].angle * ephem.degree
                   )
-
-        if restart:
-            self._start_tracking()
+            # restart tracking if it was active
+            if restart:
+                self._start_tracking()
 
     def start_stop_motor(self, motor_id, action, direction):
         """
@@ -311,23 +310,32 @@ class Controller(BaseController):
 
         motors will be started threaded and stopped by setting the stop-flag
         motor will always be stopped before starting it if action==True
-        this can only be done during calibration (i.e. before the motors are calibrated)
+        if tracking is on stop it and restart it afterwards
         """
         # if not self.calibrated:
         self._stop_motors([motor_id])
+        self.running[motor_id] = False
 
         if action:
-            # start the motor
+            # remember tracking state and start motor
+            self.restart[motor_id] = self._is_tracking
+            self.running[motor_id] = True
+            self._stop_tracking()
             self._start_motor(motor_id, direction)
         else:
             # recalculate target position (just in case of tracking)
             if self.calibrated:
-                self._observer.date = datetime.utcnow()
-                self._target._ra, self._target._dec = \
-                  self._observer.radec_of(
-                        self.motors[0].angle * ephem.degree,
-                        self.motors[1].angle * ephem.degree
-                        )
+                if not any(self.running):
+                    # no motor is running anymore thus adjust target
+                    self._observer.date = datetime.utcnow()
+                    self._target._ra, self._target._dec = \
+                        self._observer.radec_of(
+                            self.motors[0].angle * ephem.degree,
+                            self.motors[1].angle * ephem.degree
+                            )
+                    # restart tracking if tracking was active
+                    if any(self.restart):
+                        self._start_tracking()
 
 
     def set_object(self, object_id):

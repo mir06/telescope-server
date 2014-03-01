@@ -7,6 +7,9 @@ the client for controlling the telescope server manually (extenstion to the stel
 
 import os
 import sys
+from time import sleep
+from math import sqrt, ceil
+
 try:
     from gi.repository import Gtk
     from gi.repository import Gdk
@@ -22,7 +25,6 @@ from lxml import etree
 from threading import Thread
 
 from protocol import status, command
-from time import sleep
 
 class Connector(object):
     """
@@ -105,6 +107,16 @@ class Connector(object):
         data += ConstBitStream('floatle:32=%f' % alt)
         tmp = self._make_connection(data)
 
+    def start_calibration(self):
+        data = ConstBitStream('0x1400')
+        data += ConstBitStream('intle:16=%d' % command.START_CAL)
+        tmp = self._make_connection(data)
+
+    def stop_calibration(self):
+        data = ConstBitStream('0x1400')
+        data += ConstBitStream('intle:16=%d' % command.STOP_CAL)
+        tmp = self._make_connection(data)
+
     def start_stop_motor(self, motor_id, action, direction=True):
         data = ConstBitStream('0x1400')
         data += ConstBitStream('intle:16=%d' % command.START_MOT)
@@ -118,6 +130,12 @@ class Connector(object):
         data += ConstBitStream('intle:16=%d' % command.MAKE_STEP)
         data += ConstBitStream('intle:16=%d' % (2*(motor_id==0) * (direction-.5)))
         data += ConstBitStream('intle:16=%d' % (2*(motor_id==1) * (direction-.5)))
+        tmp = self._make_connection(data)
+
+    def set_object(self, obj_id):
+        data = ConstBitStream('0x1400')
+        data += ConstBitStream('intle:16=%d' % command.SET_ANGLE)
+        data += ConstBitStream('intle:16=%d' % int(obj_id))
         tmp = self._make_connection(data)
 
     def toggle_tracking(self):
@@ -434,21 +452,55 @@ class Client(object):
         dialog.hide()
 
     def onCalibrationStart(self, button):
-        pass
+        self.connection.start_calibration()
+        self._update_sighted_objects()
 
     def onCalibrationStop(self, button):
-        pass
+        self.connection.stop_calibration()
+        self._update_spr()
+
+    def _update_spr(self):
+        spr = self.connection.get_spr()
+        self.glade.get_object("current_spr").set_text(spr)
+
+    def _update_sighted_objects(self):
+        # update number of sighted objects
+        nr = self.connection.get_number_of_sighted_objects()
+        self.glade.get_object("calibration_points").set_text(nr)
+        self.glade.get_object("calibration_start").set_sensitive(int(nr)>0)
+        self.glade.get_object("calibration_stop").set_sensitive(int(nr)>1)
+
+    def onClickObject(self, button, *data):
+        obj_id = data[0]
+        self.connection.set_object(obj_id)
+        self._update_sighted_objects()
 
     def onCalibrationDialog(self, widget, data=None):
         # stop eventually running motors
         self._start_stop_motor('main', 'right', force_stop=True)
         self._start_stop_motor('main', 'up', force_stop=True)
 
-        # fill the objects' box with visible objects
-        print self.connection.get_visible_objects()
+        # stop tracking
+        if self.connection.get_tracking_status():
+            self.connection.toggle_tracking()
 
-        # update number of sighted objects
-        print self.connection.get_number_of_sighted_objects()
+        # fill the objects' box with visible objects
+        visible_objects = self.connection.get_visible_objects()
+        n = int(ceil(sqrt(len(visible_objects))))
+        nrows = 2*n
+        ncols = int(ceil(n/2))
+        button_container = self.glade.get_object("object_buttons")
+        for nr,obj in enumerate(visible_objects):
+            col, row = divmod(nr, ncols)
+            obj_id, obj_name = obj.split("-")
+            button = Gtk.Button(label=obj_name)
+            button.connect("clicked", self.onClickObject, obj_id)
+            button.show()
+            button_container.attach(button, row, col, 1, 1)
+
+        # update number of sighted objects and current spr
+        self._update_sighted_objects()
+        self._update_spr()
 
         # show the dialog
         dialog = self.glade.get_object("calib_dialog")
