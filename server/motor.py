@@ -35,7 +35,7 @@ class Motor(object):
         self._max_angle = max_angle
         self._steps = 0
         self._stop = False
-        self._delay = 0.01
+        self._delay = 1e-06
         for p in pins:
             GPIO.setup(p, GPIO.OUT)
             GPIO.output(p, False)
