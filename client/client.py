@@ -572,7 +572,7 @@ class Client(object):
         az = [ "right", "left" ]
         alt = [ "up", "down" ]
         try:
-            return 0,direction=="right",az[az.index(direction)-1]
+            return 0,direction=="left",az[az.index(direction)-1]
         except:
             return 1,direction=="up",alt[alt.index(direction)-1]
 

@@ -25,7 +25,7 @@ GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
 
 class Motor(object):
-    def __init__(self, name, pins, min_angle=-5, max_angle=365):
+    def __init__(self, name, pins, min_angle=-5, max_angle=365, positive=1):
         self.name = name
         self.PUL, self.DIR, self.ENBL = pins
         self._steps_per_rev = 0
@@ -36,6 +36,7 @@ class Motor(object):
         self._steps = 0
         self._stop = False
         self._delay = 1e-06
+        self._positive = positive
         for p in pins:
             GPIO.setup(p, GPIO.OUT)
             GPIO.output(p, False)
@@ -114,9 +115,9 @@ class Motor(object):
                 break
             GPIO.output(self.PUL, True)
             GPIO.output(self.PUL, False)
-            self._steps += 2*(direction-.5)
+            self._steps += 2*(direction-.5)*self._positive
             if self._steps_per_rev > 0:
-                self._angle += (direction-.5)*(720./self._steps_per_rev)
+                self._angle += (direction-.5)*(self._positive*720./self._steps_per_rev)
                 self._angle %= 360
             time.sleep(self._delay)
 
@@ -127,5 +128,5 @@ class Motor(object):
             if angle_to_move > 180:
                 angle_to_move = - (360.-angle_to_move)
             steps = self._steps_per_rev * angle_to_move / 360.
-            self.step(int(abs(round(steps))), steps>0)
+            self.step(int(abs(round(steps))), self._positive*steps>0)
 
