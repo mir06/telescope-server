@@ -94,11 +94,8 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
         logging.debug("connection established from %s", self.client_address[0])
         while True:
             data0 = ''
-
-            # set the socket time-out
-            # if nothing is received within this time just send data to the
-            # stellarium server
-            self.request.settimeout(.01)
+            self.request.setblocking(0)
+            # if nothing is received just send data to the stellarium server
             try:
                 data0 = self.request.recv(160)
                 data = ConstBitStream(bytes=data0, length=160)
@@ -191,6 +188,8 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
                     self.request.send(sdata.bytes)
                 except:
                     pass
+                sleep(1)
+
 
 
 class TelescopeServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):

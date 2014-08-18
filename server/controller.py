@@ -62,8 +62,8 @@ class Controller(BaseController):
         self._motor_threads = [ None, None ]
 
         ######################## test #####################
-        self.motors[0].steps_per_rev = 4000
-        self.motors[1].steps_per_rev = 4000
+        self.motors[0].steps_per_rev = 1400000
+        self.motors[1].steps_per_rev = 1400000
 
 
     @property
