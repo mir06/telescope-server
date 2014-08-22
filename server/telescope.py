@@ -10,6 +10,7 @@ be derived from BaseController (basecontroller.py) and you will overwrite the ne
 """
 
 import SocketServer
+import os
 import sys
 import argparse
 import logging
@@ -17,6 +18,7 @@ from string import replace
 from time import time, sleep
 from bitstring import ConstBitStream
 
+os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
 sys.path.append("../common")
 from protocol import command, status
 
@@ -26,7 +28,7 @@ def getopts():
     parser.add_argument("--port", type=int, default=10000)
     parser.add_argument("--controller", default="controller",
                         help="module name that implements the Controller class")
-    parser.add_argument("--log-level", default="DEBUG",
+    parser.add_argument("--log-level", default="Error",
                         help="set logging level")
     args = parser.parse_args(sys.argv[1:])
     return vars(args)
@@ -91,11 +93,15 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
         """
         handle requests
         """
+        """
         logging.debug("connection established from %s", self.client_address[0])
+        """
         while True:
             data0 = ''
             self.request.setblocking(0)
-            # if nothing is received just send data to the stellarium server
+            # set the socket time-out
+            # if nothing is received within this time just send data to the
+            # stellarium server
             try:
                 data0 = self.request.recv(160)
                 data = ConstBitStream(bytes=data0, length=160)
@@ -168,6 +174,15 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
                     except:
                         logging.error("cannot toggle tracking")
                     break
+                    
+                elif mtype == command.APPLY_OBJECT:
+                    # apply the angle of the motors to given object_id (small integer)
+                    # this shall be defined in the controller class
+                    try:
+                        self.server.controller.apply_object()
+                    except:
+                        logging.error("cannot apply controller to given object")
+                    break
 
                 elif mtype == command.STATUS:
                     # get the status of the controller by status_code (small integer)
@@ -188,8 +203,7 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
                     self.request.send(sdata.bytes)
                 except:
                     pass
-                sleep(1)
-
+                sleep(0.5)
 
 
 class TelescopeServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):

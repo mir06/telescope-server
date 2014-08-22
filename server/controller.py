@@ -28,15 +28,17 @@ class Controller(BaseController):
     and controlled via GPIO on a raspberry pi (Motor class)
     """
 
-    az_pins = [15,14,19]
-    alt_pins = [18,20,19]
+    az_pins = [15,14,8]
+    alt_pins = [23,18,7]
+    
+
 
     def __init__(self):
 
         # initialize the motors
         self.motors = [
-            Motor("Azimuth", self.az_pins),
-            Motor("Altitude", self.alt_pins, min_angle=0., max_angle=90.)
+            Motor("Azimuth", self.az_pins, positive=-1),
+            Motor("Altitude", self.alt_pins, positive=1)
         ]
 
         # initialize observer and target
@@ -60,10 +62,13 @@ class Controller(BaseController):
 
         # initialize motor threads
         self._motor_threads = [ None, None ]
+        
+        az_default_spr=1300000
+        alt_default_spr=1500000
 
         ######################## test #####################
-        self.motors[0].steps_per_rev = 1400000
-        self.motors[1].steps_per_rev = 1400000
+        self.motors[0].steps_per_rev = az_default_spr
+        self.motors[1].steps_per_rev = alt_default_spr
 
 
     @property
@@ -88,6 +93,7 @@ class Controller(BaseController):
     @property
     def calibrated(self):
         return all([ m.calibrated for m in self.motors ])
+    
 
     def _set_step_delay(self, motor_index, delay):
         """
@@ -212,7 +218,9 @@ class Controller(BaseController):
             )
         ra /= (15.*ephem.degree)
         dec /= ephem.degree
+        """
         logging.debug("send: %f / %f", ra, dec)
+        """
         return ra, dec
 
     def set_observer(self, lon, lat, alt):
@@ -245,8 +253,9 @@ class Controller(BaseController):
         for motor in self.motors:
             motor.angle = 0
             motor.steps = 0
-            motor.steps_per_rev = 0
+            motor.steps_per_rev = 1300000
 
+             
     def stop_calibration(self):
         """
         implementation of stop calibration
@@ -288,6 +297,7 @@ class Controller(BaseController):
         if motors are already calibrated and there is an active target
         correct the ra/dec for this target
         """
+        logging.debug("az_steps/ alt_steps: %f / %f", az_steps, alt_steps)
         restart = self._is_tracking
         self._stop_tracking()
         logging.debug("step motors: %d / %d", az_steps, alt_steps)
@@ -337,8 +347,17 @@ class Controller(BaseController):
                     if any(self.restart):
                         self._start_tracking()
 
-
     def set_object(self, object_id):
+        try:
+            self.choose_object_id=object_id
+            obj = self._sky_objects[self.choose_object_id]
+            logging.debug("set %s", obj.name)
+            return True
+        except:
+            logging.debug("could not set coordinates of object nr. %d", object_id)
+
+
+    def apply_object(self):
         """
         implementation of set_object
 
@@ -347,7 +366,7 @@ class Controller(BaseController):
         the angles_steps lists
         """
         try:
-            obj = self._sky_objects[object_id]
+            obj = self._sky_objects[self.choose_object_id]
             logging.debug("mark %s", obj.name)
             self._observer.date = datetime.utcnow()
             obj.compute(self._observer)
@@ -356,7 +375,7 @@ class Controller(BaseController):
             for i in xrange(2):
                 self._angles_steps[i].append((self.motors[i].angle, self.motors[i].steps))
         except:
-            logging.debug("could not set coordinates of object nr. %d", object_id)
+            logging.debug("could not apply coordinates of object nr. %d", object_id)
 
     def toggle_tracking(self):
         """

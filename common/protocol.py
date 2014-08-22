@@ -13,6 +13,7 @@ class command:
     START_MOT    = 5
     SET_ANGLE    = 6
     TOGGLE_TRACK = 7
+    APPLY_OBJECT = 8
     STATUS       = 99
 
 class status:
@@ -21,6 +22,7 @@ class status:
     AZALT       = 3
     CALIBRATED  = 4
     TRACKING    = 5
+    MOTORRUN    = 6
     SPR         = 10
     AZ_ANGLES   = 11
     ALT_ANGLES  = 12

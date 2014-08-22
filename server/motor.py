@@ -1,6 +1,7 @@
 # -*- encoding: utf-8 -*-
 
 import time
+import logging
 
 # if not running on raspberry just ignore
 # the actual control of the motors
@@ -35,7 +36,7 @@ class Motor(object):
         self._max_angle = max_angle
         self._steps = 0
         self._stop = False
-        self._delay = 1e-06
+        self._delay = 1e-04
         self._positive = positive
         for p in pins:
             GPIO.setup(p, GPIO.OUT)
@@ -106,21 +107,27 @@ class Motor(object):
         self._delay = value
 
     def step(self, steps, direction):
+        logging.debug("Input: actual_step/steps/direction: %d / %d / %d", self._steps, steps, direction)
         self._stop = False
-        GPIO.output(self.DIR, direction)
+        GPIO.output(self.DIR, not(direction))
         for step in xrange(steps):
+            step_delay=0.1/(7**len(str(step)))
             if self._stop or \
                 (self._angle <= self._minimum and not direction) or \
                 (self._angle >= self._maximum and direction):
+                logging.debug("Break: actual_step/steps/direction: %d / %d / %d", step, steps, direction)
                 break
+
             GPIO.output(self.PUL, True)
+            time.sleep(self._delay+step_delay)
             GPIO.output(self.PUL, False)
             self._steps += 2*(direction-.5)*self._positive
             if self._steps_per_rev > 0:
                 self._angle += (direction-.5)*(self._positive*720./self._steps_per_rev)
                 self._angle %= 360
-            time.sleep(self._delay)
-
+            time.sleep(self._delay+step_delay)
+        logging.debug("EndBreak: actual_step/steps/direction: %d / %d / %d", self._steps, steps, direction)
+         
     def move(self, angle):
         angle = angle % 360
         if (self._steps_per_rev > 0) and self._enabled:

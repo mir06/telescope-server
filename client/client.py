@@ -90,7 +90,12 @@ class Connector(object):
     def get_spr(self):
         response = self.get_status(status.SPR)
         return response.split(':')[-1]
-
+    
+    def get_curr_steps(self):
+        response = self.get_status(status.CURR_STEPS)
+        return response.split(':')[-1]
+        
+       
     def get_visible_objects(self):
         response = self.get_status(status.VISIBLE_OBJ)
         return response.split(',')
@@ -125,17 +130,22 @@ class Connector(object):
         data += ConstBitStream('intle:16=%d' % direction)
         tmp = self._make_connection(data)
 
-    def make_step(self, motor_id, direction):
+    def make_step(self, motor_id, direction,stepsperclick):
         data = ConstBitStream('0x1400')
         data += ConstBitStream('intle:16=%d' % command.MAKE_STEP)
-        data += ConstBitStream('intle:16=%d' % (2*(motor_id==0) * (direction-.5)))
-        data += ConstBitStream('intle:16=%d' % (2*(motor_id==1) * (direction-.5)))
+        data += ConstBitStream('intle:16=%d' % (2*(motor_id==0) * (direction-.5) * stepsperclick))
+        data += ConstBitStream('intle:16=%d' % (2*(motor_id==1) * (direction-.5) * stepsperclick))
         tmp = self._make_connection(data)
 
     def set_object(self, obj_id):
         data = ConstBitStream('0x1400')
         data += ConstBitStream('intle:16=%d' % command.SET_ANGLE)
         data += ConstBitStream('intle:16=%d' % int(obj_id))
+        tmp = self._make_connection(data)
+        
+    def apply_object(self):
+        data = ConstBitStream('0x1400')
+        data += ConstBitStream('intle:16=%d' % command.APPLY_OBJECT)
         tmp = self._make_connection(data)
 
     def toggle_tracking(self):
@@ -178,7 +188,8 @@ class Client(object):
         self.location_tree = self.glade.get_object("treeview_location")
 
         self.tracking_switch = self.glade.get_object("tracking_switch")
-
+        self.spc = self.glade.get_object("spc")
+        
         # connect signals with userdata
         for ind, col in enumerate(self.location_tree.get_columns()):
             col.get_cells()[0].connect("edited", self.onEditCell, (self.location_store, ind))
@@ -218,6 +229,13 @@ class Client(object):
             'right': Gdk.KEY_Right, 'left': Gdk.KEY_Left,
             'up': Gdk.KEY_Up, 'down': Gdk.KEY_Down }
         self.key_direction = {value:key for key, value in self.direction_key.iteritems()}
+        
+        try:
+            curr_steps = self.connection.get_curr_steps()
+        except:
+            curr_steps = "na/na"
+        self.glade.get_object("info_curr_steps_main").set_text(curr_steps)
+        self.glade.get_object("info_curr_steps_calib").set_text(curr_steps)        
 
     def check_tracking(self):
         """
@@ -286,6 +304,7 @@ class Client(object):
             self.connection = Connector(hostname, port)
             self.glade.get_object("hostname").set_text(hostname)
             self.glade.get_object("port").set_value(port)
+            self.glade.get_object("spc").set_value(1)
         except:
             pass
 
@@ -296,26 +315,27 @@ class Client(object):
             self.active_location = active.attrib['location']
         except:
             self.active_location = ""
-
         name_list = []
-        for loc in locations.findall("location"):
-            # ensure uniqueness
-            name = loc.attrib['name']
-            lon = float(loc.attrib['lon'])
-            lat = float(loc.attrib['lat'])
-            alt = float(loc.attrib['alt'])
-            if name not in name_list:
-                self.location_store.append([name, lon, lat, alt])
-                if name == self.active_location:
-                    # try to set the location (if there is no server just leave it)
-                    try:
-                        self.connection.set_location(lon, lat, alt)
-                    except:
-                        pass
-                    # set the active row (must be last line of name_list at this moment)
-                    self.location_tree.set_cursor(len(name_list))
-                name_list.append(name)
-
+        try:
+            for loc in locations.findall("location"):
+                # ensure uniqueness
+                name = loc.attrib['name']
+                lon = float(loc.attrib['lon'])
+                lat = float(loc.attrib['lat'])
+                alt = float(loc.attrib['alt'])
+                if name not in name_list:
+                    self.location_store.append([name, lon, lat, alt])
+                    if name == self.active_location:
+                        # try to set the location (if there is no server just leave it)
+                        try:
+                            self.connection.set_location(lon, lat, alt)
+                        except:
+                            pass
+                        # set the active row (must be last line of name_list at this moment)
+                        self.location_tree.set_cursor(len(name_list))
+                    name_list.append(name)
+        except:
+            pass
 
         self.check_widgets()
 
@@ -374,10 +394,22 @@ class Client(object):
             except ValueError:
                 pass
         return
-
+    def run(self):
+        """
+	      Startet die zentrale Warteschleife von Gtk
+	      """
+        try:
+            Gtk.main()
+        except KeyboardInterrupt:
+            pass
+            
     def onDeleteWindow(self, widget, data=None):
         self.write_preferences()
-        Gtk.main_quit()
+        try:
+            Gtk.main_quit()
+        except KeyboardInterrupt:
+            pass
+
 
     def onLocationAdd(self, button):
         """
@@ -453,11 +485,40 @@ class Client(object):
 
     def onCalibrationStart(self, button):
         self.connection.start_calibration()
+        try:
+            curr_steps = self.connection.get_curr_steps()
+        except:
+            curr_steps = "na/na"
+        self.glade.get_object("info_curr_steps_main").set_text(curr_steps)
+        self.glade.get_object("info_curr_steps_calib").set_text(curr_steps)
+        self.glade.get_object("calibration_object").set_text("-")
+        self._update_spr()
         self._update_sighted_objects()
+        self.glade.get_object("apply_object").set_sensitive(False)
 
     def onCalibrationStop(self, button):
         self.connection.stop_calibration()
         self._update_spr()
+        
+    def onApplyObject(self, button):
+        try:
+            curr_steps = self.connection.get_curr_steps()
+        except:
+            curr_steps = "na/na"
+        self.glade.get_object("info_curr_steps_main").set_text(curr_steps)
+        self.glade.get_object("info_curr_steps_calib").set_text(curr_steps)
+        self.connection.apply_object()
+        self._update_sighted_objects()
+
+    def onActualObject(self, button):
+        try:
+            curr_steps = self.connection.get_curr_steps()
+        except:
+            curr_steps = "na/na"
+        self.glade.get_object("info_curr_steps_main").set_text(curr_steps)
+        self.glade.get_object("info_curr_steps_calib").set_text(curr_steps)
+        self._update_spr()
+        self._update_sighted_objects()
 
     def _update_spr(self):
         spr = self.connection.get_spr()
@@ -466,13 +527,20 @@ class Client(object):
     def _update_sighted_objects(self):
         # update number of sighted objects
         nr = self.connection.get_number_of_sighted_objects()
-        self.glade.get_object("calibration_points").set_text(nr)
-        self.glade.get_object("calibration_start").set_sensitive(int(nr)>0)
-        self.glade.get_object("calibration_stop").set_sensitive(int(nr)>1)
+        if isinstance(nr,int ):
+            self.glade.get_object("calibration_points").set_text(nr)
+            self.glade.get_object("calibration_start").set_sensitive(int(nr)>0)
+            self.glade.get_object("calibration_stop").set_sensitive(int(nr)>1)
+
+
+
 
     def onClickObject(self, button, *data):
         obj_id = data[0]
+        obj_name=data[1]
         self.connection.set_object(obj_id)
+        self.glade.get_object("calibration_object").set_text(obj_name)
+        self.glade.get_object("apply_object").set_sensitive(True)
         self._update_sighted_objects()
 
     def onCalibrationDialog(self, widget, data=None):
@@ -494,14 +562,19 @@ class Client(object):
             col, row = divmod(nr, ncols)
             obj_id, obj_name = obj.split("-")
             button = Gtk.Button(label=obj_name)
-            button.connect("clicked", self.onClickObject, obj_id)
+            button.connect("clicked", self.onClickObject, obj_id,obj_name)
             button.show()
+            button.set_focus_on_click(True)
             button_container.attach(button, row, col, 1, 1)
 
         # update number of sighted objects and current spr
         self._update_sighted_objects()
         self._update_spr()
-
+        try:
+            curr_steps = self.connection.get_curr_steps()
+        except:
+            curr_steps = "na/na"
+        self.glade.get_object("info_curr_steps_main").set_text(curr_steps)
         # show the dialog
         dialog = self.glade.get_object("calib_dialog")
         response = dialog.run()
@@ -544,13 +617,18 @@ class Client(object):
             spr = self.connection.get_spr()
         except:
             spr = "na/na"
-
+        try:
+            curr_steps = self.connection.get_curr_steps()
+        except:
+            curr_steps = "na/na"
+            
         self.glade.get_object("info_location").set_text(location)
         self.glade.get_object("info_radec").set_text(radec)
         self.glade.get_object("info_azalt").set_text(azalt)
         self.glade.get_object("info_calibrated").set_text(calibrated)
         self.glade.get_object("info_tracking").set_text(tracking)
         self.glade.get_object("info_spr").set_text(spr)
+        self.glade.get_object("info_curr_steps").set_text(curr_steps)
 
         response = dialog.run()
         dialog.hide()
@@ -569,7 +647,7 @@ class Client(object):
           index (0-azimuthal, 1-altitudinal), direction as True,False and the opposite direction
 
         """
-        az = [ "right", "left" ]
+        az = [ "left", "right" ]
         alt = [ "up", "down" ]
         try:
             return 0,direction=="left",az[az.index(direction)-1]
@@ -627,7 +705,16 @@ class Client(object):
         elif event.button == 1:
             if not self._start_stop_motor(window, direction, force_stop=True):
                 index, bool_dir, other_dir = self._translate_direction(direction)
-                self.connection.make_step(index, bool_dir)
+                stepsperclick=int(self.glade.get_object("spc").get_value())
+                self.connection.make_step(index, bool_dir,stepsperclick)
+                sleep(0.01)
+        try:
+            curr_steps = self.connection.get_curr_steps()
+        except:
+            curr_steps = "na/na"
+            
+        self.glade.get_object("info_curr_steps_main").set_text(curr_steps)
+        self.glade.get_object("info_curr_steps_calib").set_text(curr_steps)
 
     def onCursorPressed(self, widget, event, data=None):
         """
@@ -651,9 +738,14 @@ class Client(object):
                 direction = self.key_direction[event.keyval]
                 index = direction in ["right", "left"]
                 self._start_stop_motor(window, direction)
-
+        try:
+            curr_steps = self.connection.get_curr_steps()
+        except:
+            curr_steps = "na/na"
+        self.glade.get_object("info_curr_steps_main").set_text(curr_steps)
+        self.glade.get_object("info_curr_steps_calib").set_text(curr_steps)
         return True
 
 if __name__ == "__main__":
     client = Client()
-    Gtk.main()
+    client.run()
