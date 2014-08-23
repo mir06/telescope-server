@@ -65,7 +65,7 @@ pin_down=11
 pin_apply=10
 
 
-hostname="10.0.0.17"
+hostname="localhost"
 port=10000
 
 class Connector(object):

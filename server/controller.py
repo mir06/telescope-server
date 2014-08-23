@@ -93,7 +93,11 @@ class Controller(BaseController):
     @property
     def calibrated(self):
         return all([ m.calibrated for m in self.motors ])
-    
+        
+    @property
+    def _is_motorrun(self):
+        print [ m.stop for m in self.motors ]
+        return not all([ m.stop for m in self.motors ])        
 
     def _set_step_delay(self, motor_index, delay):
         """
@@ -418,5 +422,7 @@ class Controller(BaseController):
             return "current steps (az/alt): %d / %d" % (self.motors[0].steps, self.motors[1].steps)
         elif status_code == status.VISIBLE_OBJ:
             return self._visible_objects()
+        elif status_code == status.MOTORRUN:
+            return "tracking: %s" % (self._is_motorrun and "YES" or "NO")
         else:
             return "status code %d not defined" % status_code

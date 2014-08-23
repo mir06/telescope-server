@@ -35,7 +35,7 @@ class Motor(object):
         self._min_angle = min_angle
         self._max_angle = max_angle
         self._steps = 0
-        self._stop = False
+        self._stop = True
         self._delay = 1e-04
         self._positive = positive
         for p in pins:
@@ -116,6 +116,7 @@ class Motor(object):
                 (self._angle <= self._minimum and not direction) or \
                 (self._angle >= self._maximum and direction):
                 logging.debug("Break: actual_step/steps/direction: %d / %d / %d", step, steps, direction)
+                self._stop = True
                 break
 
             GPIO.output(self.PUL, True)
@@ -126,6 +127,7 @@ class Motor(object):
                 self._angle += (direction-.5)*(self._positive*720./self._steps_per_rev)
                 self._angle %= 360
             time.sleep(self._delay+step_delay)
+        self._stop = True
         logging.debug("EndBreak: actual_step/steps/direction: %d / %d / %d", self._steps, steps, direction)
          
     def move(self, angle):
