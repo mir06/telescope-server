@@ -1,4 +1,6 @@
 # -*- encoding: utf-8 -*-
+# Copyright: Armin Leuprecht <mir@mur.at> and Stephan Burger <stephan101@gmail.com>
+# License: GNU GPL version 3; http://www.gnu.org/licenses/gpl.txt
 
 from basecontroller import BaseController
 from motor import Motor
@@ -15,9 +17,7 @@ from itertools import combinations
 from sys import maxint
 import logging
 
-import sys
-sys.path.append("../common")
-from protocol import status
+from telescope.common.protocol import status
 
 class Controller(BaseController):
     """
@@ -31,8 +31,6 @@ class Controller(BaseController):
     az_pins = [15,14,8]
     alt_pins = [23,18,7]
     
-
-
     def __init__(self):
 
         # initialize the motors
@@ -96,7 +94,6 @@ class Controller(BaseController):
         
     @property
     def _is_motorrun(self):
-        print [ m.stop for m in self.motors ]
         return not all([ m.stop for m in self.motors ])        
 
     def _set_step_delay(self, motor_index, delay):
@@ -164,6 +161,8 @@ class Controller(BaseController):
                 self._stop_motors()
                 self._is_tracking = False
                 self._tracking_thread.join()
+                # be sure that motors are really stopped
+                self._stop_motors()
             except:
                 pass
 
@@ -204,6 +203,7 @@ class Controller(BaseController):
         self._target._ra = "%f" % ra
         self._target._dec = "%f" % dec
         self._observer.date = datetime.utcnow()
+        # self._stop_motors()
         self._stop_tracking()
         self._start_tracking()
 
@@ -363,7 +363,7 @@ class Controller(BaseController):
 
     def apply_object(self):
         """
-        implementation of set_object
+        implementation of apply_object
 
         calculate position of given object, set the motors to
         the respective azimuthal and altitudinal angles and update

@@ -1,0 +1,16 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Copyright: Armin Leuprecht <mir@mur.at> and Stephan Burger <stephan101@gmail.com>
+# License: GNU GPL version 3; http://www.gnu.org/licenses/gpl.txt
+
+"""
+the client for controlling the telescope server manually (extenstion to the stellarium features)
+this is just the start script, you will find the sources in telescope/client
+"""
+
+from telescope.client.control import GtkClient
+
+if __name__ == "__main__":
+    client = GtkClient()
+    client.run()
+

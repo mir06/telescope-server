@@ -1,8 +1,9 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# Copyright: Armin Leuprecht <mir@mur.at> and Stephan Burger <stephan101@gmail.com>
+# License: GNU GPL version 3; http://www.gnu.org/licenses/gpl.txt
 
 """
-the client for controlling the telescope server manually (extenstion to the stellarium features)
+the client classes for controlling the telescope server manually
 """
 
 import os
@@ -16,15 +17,14 @@ try:
 except:
     sys.exit(1)
 
-sys.path.append("../common")
-
 import socket
 from bitstring import ConstBitStream
 
 from lxml import etree
 from threading import Thread
 
-from protocol import status, command
+# append search path
+from telescope.common.protocol import status, command
 
 class Connector(object):
     """
@@ -49,6 +49,7 @@ class Connector(object):
     def _make_connection(self, data):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect((self.hostname, self.port))
+        sock.settimeout(1.0)
         data += ConstBitStream('int:%d=0' % (160-data.len))
         try:
             sock.sendall(data.tobytes())
@@ -130,11 +131,11 @@ class Connector(object):
         data += ConstBitStream('intle:16=%d' % direction)
         tmp = self._make_connection(data)
 
-    def make_step(self, motor_id, direction,stepsperclick):
+    def make_step(self, motor_id, direction, steps_per_click):
         data = ConstBitStream('0x1400')
         data += ConstBitStream('intle:16=%d' % command.MAKE_STEP)
-        data += ConstBitStream('intle:16=%d' % (2*(motor_id==0) * (direction-.5) * stepsperclick))
-        data += ConstBitStream('intle:16=%d' % (2*(motor_id==1) * (direction-.5) * stepsperclick))
+        data += ConstBitStream('intle:16=%d' % (2*(motor_id==0) * (direction-.5) * steps_per_click))
+        data += ConstBitStream('intle:16=%d' % (2*(motor_id==1) * (direction-.5) * steps_per_click))
         tmp = self._make_connection(data)
 
     def set_object(self, obj_id):
@@ -153,7 +154,7 @@ class Connector(object):
         data += ConstBitStream('intle:16=%d' % command.TOGGLE_TRACK)
         tmp = self._make_connection(data)
 
-class Client(object):
+class GtkClient(object):
     """
     The GUI to the Telescope-client
     """
@@ -164,12 +165,16 @@ class Client(object):
         initialize the gui
         """
         # set the glade file
-        self.gladefile = os.path.join("ui", "client.glade")
+        self.gladefile = os.path.join(os.path.dirname(__file__), "ui", "telescope-client.glade")
         self.glade = Gtk.Builder()
         self.glade.add_from_file(self.gladefile)
 
         # connect signals
         self.glade.connect_signals(self)
+
+        # set the window icon
+        self.glade.get_object("main_window").set_icon_from_file(
+            os.path.join(os.path.dirname(__file__), "ui", "telescope-client.png"))
 
         # show images on buttons
         settings = Gtk.Settings.get_default()
@@ -188,7 +193,7 @@ class Client(object):
         self.location_tree = self.glade.get_object("treeview_location")
 
         self.tracking_switch = self.glade.get_object("tracking_switch")
-        self.spc = self.glade.get_object("spc")
+        self.steps_per_click = self.glade.get_object("steps_per_click")
         
         # connect signals with userdata
         for ind, col in enumerate(self.location_tree.get_columns()):
@@ -199,8 +204,8 @@ class Client(object):
 
         # start thread that looks if tracking is active or not
         self.tracking_thread = Thread(target=self.check_tracking)
-        self.tracking_thread.daemon = True
-        self.tracking_thread.start()
+        # self.tracking_thread.daemon = True
+        # self.tracking_thread.start()
 
         # show the main window
         self.glade.get_object("main_window").show_all()
@@ -216,7 +221,8 @@ class Client(object):
 
                 # images (fixed and animated icons)
                 im = Gtk.Image()
-                im.set_from_file("ui/%s-animated.gif" % direction)
+                im.set_from_file(os.path.join(os.path.dirname(__file__), 
+                                              "ui", "%s-animated.gif" % direction))
                 im.show()
                 self.button_images[window][direction] = dict()
                 self.button_images[window][direction]["stopped"] = \
@@ -304,7 +310,7 @@ class Client(object):
             self.connection = Connector(hostname, port)
             self.glade.get_object("hostname").set_text(hostname)
             self.glade.get_object("port").set_value(port)
-            self.glade.get_object("spc").set_value(1)
+            self.glade.get_object("steps_per_click").set_value(1)
         except:
             pass
 
@@ -555,6 +561,7 @@ class Client(object):
         # fill the objects' box with visible objects
         visible_objects = self.connection.get_visible_objects()
         n = int(ceil(sqrt(len(visible_objects))))
+        print visible_objects
         nrows = 2*n
         ncols = int(ceil(n/2))
         button_container = self.glade.get_object("object_buttons")
@@ -698,15 +705,15 @@ class Client(object):
         """
         window, direction = Gtk.Buildable.get_name(button).split('_')
         # right click starts/stops motor
-        # left click does one step (and stops running motor)
+        # left click does steps_per_click steps (and stops running motor)
         if event.button == 3:
             self._start_stop_motor(window, direction)
 
         elif event.button == 1:
             if not self._start_stop_motor(window, direction, force_stop=True):
                 index, bool_dir, other_dir = self._translate_direction(direction)
-                stepsperclick=int(self.glade.get_object("spc").get_value())
-                self.connection.make_step(index, bool_dir,stepsperclick)
+                steps_per_click=int(self.glade.get_object("steps_per_click").get_value())
+                self.connection.make_step(index, bool_dir, steps_per_click)
                 sleep(0.01)
         try:
             curr_steps = self.connection.get_curr_steps()
@@ -745,7 +752,3 @@ class Client(object):
         self.glade.get_object("info_curr_steps_main").set_text(curr_steps)
         self.glade.get_object("info_curr_steps_calib").set_text(curr_steps)
         return True
-
-if __name__ == "__main__":
-    client = Client()
-    client.run()

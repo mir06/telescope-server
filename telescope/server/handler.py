@@ -1,37 +1,23 @@
-#! /usr/bin/env python
 # -*- encoding: utf-8 -*-
+# Copyright: Armin Leuprecht <mir@mur.at> and Stephan Burger <stephan101@gmail.com>
+# License: GNU GPL version 3; http://www.gnu.org/licenses/gpl.txt
 
 """
-Implements a telescope server that can handle Stellarium Telescope control (goto/send current position)
-plus a manual control for calibrating physical equipment.
+Implements a telescope server that can handle Stellarium Telescope control (goto/send
+current position) plus a manual control for calibrating physical equipment.
 
-You have to implement a controller class that actually manages that physical equipment. This class shall
-be derived from BaseController (basecontroller.py) and you will overwrite the necessary member functions
+You have to implement a controller class that actually manages that physical equipment.
+This class shall be derived from BaseController (basecontroller.py) and you will overwrite
+the necessary member functions
 """
 
 import SocketServer
-import os
-import sys
-import argparse
-import logging
 from string import replace
 from time import time, sleep
 from bitstring import ConstBitStream
+import threading
 
-os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
-sys.path.append("../common")
-from protocol import command, status
-
-def getopts():
-    parser = argparse.ArgumentParser(description="Telescope Server")
-    parser.add_argument("--host", default="0.0.0.0")
-    parser.add_argument("--port", type=int, default=10000)
-    parser.add_argument("--controller", default="controller",
-                        help="module name that implements the Controller class")
-    parser.add_argument("--log-level", default="Error",
-                        help="set logging level")
-    args = parser.parse_args(sys.argv[1:])
-    return vars(args)
+from telescope.common.protocol import command, status
 
 class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
     def _stellarium2coords(self, ra_uint, dec_int):
@@ -93,15 +79,12 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
         """
         handle requests
         """
-        """
-        logging.debug("connection established from %s", self.client_address[0])
-        """
         while True:
             data0 = ''
-            self.request.setblocking(0)
             # set the socket time-out
             # if nothing is received within this time just send data to the
             # stellarium server
+            self.request.settimeout(.01)
             try:
                 data0 = self.request.recv(160)
                 data = ConstBitStream(bytes=data0, length=160)
@@ -190,6 +173,7 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
                     try:
                         response = self.server.controller.get_status(status_code)
                         self.request.sendall(response)
+                        sleep(.01)
                     except:
                          logging.error('cannot get status of controller')
                     break
@@ -215,27 +199,3 @@ class TelescopeServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     def __init__(self, server_address, controller, RequestHandler):
         SocketServer.TCPServer.__init__(self, server_address, RequestHandler)
         self.controller = controller
-
-if __name__ == "__main__":
-    args = getopts()
-
-    # set logging level
-    numeric_level = getattr(logging, args["log_level"].upper(), None)
-    if not isinstance(numeric_level, int):
-        raise ValueError('Invalid log level: %s' % loglevel)
-
-    logging.basicConfig(filename="telescope.log",
-                        level=numeric_level,
-                        format="%(levelname)s: %(asctime)s %(message)s",
-                        datefmt='%Y-%m-%d %H:%M:%S')
-
-    controller_module = __import__(args['controller'])
-    controller = controller_module.Controller()
-
-    server = TelescopeServer((args["host"], args["port"]), controller, TelescopeRequestHandler)
-
-    # terminate with Ctrl-C
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        sys.exit(0)

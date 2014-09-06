@@ -1,7 +1,10 @@
 # -*- encoding: utf-8 -*-
+# Copyright: Armin Leuprecht <mir@mur.at> and Stephan Burger <stephan101@gmail.com>
+# License: GNU GPL version 3; http://www.gnu.org/licenses/gpl.txt
 
 import time
 import logging
+from math import cos, pi
 
 # if not running on raspberry just ignore
 # the actual control of the motors
@@ -26,7 +29,8 @@ GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
 
 class Motor(object):
-    def __init__(self, name, pins, min_angle=-5, max_angle=365, positive=1):
+    def __init__(self, name, pins, min_angle=-5, max_angle=365,
+                 positive=1, accel_steps=100, accel_start_delay=.001):
         self.name = name
         self.PUL, self.DIR, self.ENBL = pins
         self._steps_per_rev = 0
@@ -42,6 +46,8 @@ class Motor(object):
             GPIO.setup(p, GPIO.OUT)
             GPIO.output(p, False)
 
+        self._accel_curve = [ .5*accel_start_delay*(1.+cos(x*pi/accel_steps)) 
+                              for x in xrange(accel_steps)]
     def __str__(self):
         return self.name
 
@@ -107,28 +113,33 @@ class Motor(object):
         self._delay = value
 
     def step(self, steps, direction):
-        logging.debug("Input: actual_step/steps/direction: %d / %d / %d", self._steps, steps, direction)
-        self._stop = False
-        GPIO.output(self.DIR, not(direction))
-        for step in xrange(steps):
-            step_delay=0.1/(7**len(str(step)))
-            if self._stop or \
-                (self._angle <= self._minimum and not direction) or \
-                (self._angle >= self._maximum and direction):
-                logging.debug("Break: actual_step/steps/direction: %d / %d / %d", step, steps, direction)
-                self._stop = True
-                break
+        if steps:
+            logging.debug("INPUT -- %s: actual_step/steps/direction: %d / %d / %d",
+                          self.name, self._steps, steps, direction)
+            self._stop = False
+            GPIO.output(self.DIR, direction)
+            for step in xrange(steps):
+                try:
+                    step_delay = self._accel_curve[min(step, abs(step-(steps-1)))]
+                except:
+                    step_dely = 0.
 
-            GPIO.output(self.PUL, True)
-            time.sleep(self._delay+step_delay)
-            GPIO.output(self.PUL, False)
-            self._steps += 2*(direction-.5)*self._positive
-            if self._steps_per_rev > 0:
-                self._angle += (direction-.5)*(self._positive*720./self._steps_per_rev)
-                self._angle %= 360
-            time.sleep(self._delay+step_delay)
-        self._stop = True
-        logging.debug("EndBreak: actual_step/steps/direction: %d / %d / %d", self._steps, steps, direction)
+                if self._stop or \
+                   (self._angle <= self._minimum and not direction) or \
+                   (self._angle >= self._maximum and direction):
+                    logging.debug("BREAK -- %s: actual_step/steps/direction: %d / %d / %d",
+                                  self.name, self._steps, steps, direction)
+                    return
+                    
+                GPIO.output(self.PUL, True)
+                GPIO.output(self.PUL, False)
+                self._steps += 2*(direction-.5)*self._positive
+                if self._steps_per_rev > 0:
+                    self._angle += (direction-.5)*(self._positive*720./self._steps_per_rev)
+                    self._angle %= 360
+                time.sleep(self._delay+step_delay)
+            logging.debug("END -- %s: actual_step/steps/direction: %d / %d / %d",
+                          self.name, self._steps, steps, direction)
          
     def move(self, angle):
         angle = angle % 360

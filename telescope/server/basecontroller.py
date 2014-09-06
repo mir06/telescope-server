@@ -1,4 +1,6 @@
 # -*- encoding: utf-8  -*-
+# Copyright: Armin Leuprecht <mir@mur.at> and Stephan Burger <stephan101@gmail.com>
+# License: GNU GPL version 3; http://www.gnu.org/licenses/gpl.txt
 
 class BaseController(object):
     """
