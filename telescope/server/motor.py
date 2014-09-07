@@ -6,27 +6,7 @@ import time
 import logging
 from math import cos, pi
 
-# if not running on raspberry just ignore
-# the actual control of the motors
-try:
-    import RPi.GPIO as GPIO
-except:
-    class gpio:
-        OUT = 0
-        BCM = 0
-        def setmode(self, i):
-            pass
-        def setwarnings(self, b):
-            pass
-        def setup(self, p, i):
-            pass
-        def output(self, p, b):
-            pass
-
-    GPIO = gpio()
-
-GPIO.setmode(GPIO.BCM)
-GPIO.setwarnings(False)
+from gpio import GPIO
 
 class Motor(object):
     def __init__(self, name, pins, min_angle=-5, max_angle=365,

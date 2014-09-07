@@ -16,6 +16,8 @@ import logging
 import sys
 import os
 import importlib
+import pkgutil
+import telescope.server.plugins as pl
 
 from telescope.server import handler
 
@@ -52,6 +54,20 @@ if __name__ == "__main__":
     server = handler.TelescopeServer((args["host"], args["port"]), 
                                      controller, 
                                      handler.TelescopeRequestHandler)
+
+    # load plugins
+    plugins = {}
+    for importer, modname, ispkg in \
+        pkgutil.walk_packages(path=pl.__path__, prefix=pl.__name__+'.'):
+        module = importlib.import_module(modname)
+        name = modname.split('.')[-1]
+        try:
+            plugins[name] = module.__getattribute__(name.capitalize())()
+            logging.info("plugin loaded: %s (%s)" % (name, module.__doc__.strip()))
+        except:
+            pass
+        del module
+        del name
 
     # terminate with Ctrl-C
     try:
