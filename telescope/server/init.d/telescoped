@@ -35,14 +35,16 @@ export PATH
 . /lib/lsb/init-functions
 
 start() {
-    log_action_begin_msg "Starting $PROG"
+    log_daemon_msg "Starting $PROG" "$NAME"
     start-stop-daemon --start --quiet --oknodo --background \
 	--make-pidfile --pidfile $PIDFILE --startas $DAEMON
+    log_end_msg $?
 }
 
 stop() {
-    log_action_begin_msg "Stopping $PROG"
+    log_daemon_msg "Stopping $PROG" "$NAME"
     start-stop-daemon --stop --quiet --pidfile $PIDFILE --retry 10
+    log_end_msg $?
 }
 
 case "$1" in
@@ -57,9 +59,9 @@ case "$1" in
 	start
 	;;
     status)
-	status_of_proc $DAEMON $NAME
+	status_of_proc -p $PIDFILE $DAEMON $NAME && exit 0 || exit $?
 	;;
     *)
-	log_success_msg "Usage: /etc/init.d/telescoped {start|stop|restart|status}"
+	echo "Usage: $0 {start|stop|restart|status}"
 	exit 1
 esac
