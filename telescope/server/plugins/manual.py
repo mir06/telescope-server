@@ -36,7 +36,7 @@ class Manual(object):
         if GPIO.input(pin):
             self.controller._start_motor(motor, direction)
         else:
-            self.controller._stop_motors(motor)
+            self.controller._stop_motors([motor])
 
     def _set_angle(self):
         # set the angle for the object selected by the gui-client
