@@ -6,6 +6,7 @@
 plugin to handle a the manual control
 """
 
+from time import sleep
 from telescope.server.gpio import GPIO
 
 class Manual(object):
@@ -33,11 +34,16 @@ class Manual(object):
     def _action(self, pin):
         # start or stop the motor
         motor, direction = self._pins_args[pin]
+        # to be sure about the input signal wait a little longer
+        # than the bouncing time is
+        sleep(.1)
         if GPIO.input(pin):
             self.controller._start_motor(motor, direction)
+            logging.info("start motor by manual control")
         else:
             self.controller._stop_motors([motor])
+            logging.info("stop motor by manual control")
 
-    def _set_angle(self):
+    def _set_angle(self, pin):
         # set the angle for the object selected by the gui-client
         self.controller.apply_object()
