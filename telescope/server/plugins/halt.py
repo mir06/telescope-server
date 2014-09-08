@@ -14,9 +14,9 @@ class Halt(object):
         halt_pin = 4
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(halt_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-        GPIO.add_event_detect(halt_pin, GPIO.RISING, callback=self.halt, bouncetime=300)
+        GPIO.add_event_detect(halt_pin, GPIO.RISING, callback=self._halt, bouncetime=500)
 
-    def halt(channel):
+    def _halt(self, channel):
         """
         that's the callback function that actually halts the raspberry pi
         """
