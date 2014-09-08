@@ -12,7 +12,10 @@ except:
         OUT = 0
         IN = 0
         PUD_DOWN = 0
+        PUD_UP = 0
         RISING = 0
+        FALLING = 0
+        
         def setmode(self, mode):
             pass
         def setwarnings(self, bool):

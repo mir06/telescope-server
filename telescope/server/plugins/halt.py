@@ -10,7 +10,7 @@ import subprocess
 from telescope.server.gpio import GPIO
 
 class Halt(object):
-    def __init__(self):
+    def __init__(self, controller):
         halt_pin = 4
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(halt_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
