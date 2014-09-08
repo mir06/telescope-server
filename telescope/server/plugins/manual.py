@@ -11,32 +11,32 @@ from telescope.server.gpio import GPIO
 class Manual(object):
     def __init__(self, controller):
         self.controller = controller
-        self._motor_pins_dirs = {
-            # define the gpio-pins and arguments for controller call
-            'left': (22, 0, True),
-            'right': (27, 0, False),
-            'up': (9, 1, True),
-            'down': (11, 1, False),
-        }
-        self._set_angle_pin = 10
-        GPIO.setmode(GPIO.BCM)
-        for name, pin in self._motor_pins_dirs.iteritems():
-            GPIO.setup(pin[0], GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-            GPIO.add_event_detect(pin[0], GPIO.RISING, 
-                                  callback=lambda x: self._start(x), bouncetime=100)    
-            GPIO.add_event_detect(pin[0], GPIO.FALLING, 
-                                  callback=lambda x: self._stop(x), bouncetime=100)    
-        GPIO.setup(self._set_angle_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-        GPIO.add_event_detect(self._set_angle_pin, GPIO.RISING, 
-                              callback=self._set_angle, bouncetime=500)
+	self._pins_args = {
+	    # define the gpio pins and arguments for controller call
+	    22: (0, True),     # left
+	    27: (0, False),    # right
+	     9: (1, True),     # up
+   	    11: (1, False),    # down
+	}
+	self._set_angle_pin = 10
+	GPIO.setmode(GPIO.BCM)
+	# motor control
+	for pin in self._pins_args.keys():
+	    GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+	    GPIO.add_event_detect(pin, GPIO.BOTH, self._action, bouncetime=100)
 
-    def _start(self, what):
-        # start the motor
-        self.controller._start_motor(self._motor_pins_dirs[what][1], self._motor_pins_dirs[what][2])
+	# set object angle control
+	GPIO.setup(self._set_angle_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+	GPIO.add_event_detect(self._set_angle_pin, GPIO.RISING,
+			      callback=self._set_angle, bouncetime=250)
 
-    def _stop(self, what):
-        # stop the motor
-        self.controller._stop_motors([self._motor_pins_dirs[what][1]])
+    def _action(self, pin):
+        # start or stop the motor
+        motor, direction = self._pins_args[pin]
+        if GPIO.input(pin):
+            self.controller._start_motor(motor, direction)
+        else:
+            self.controller.stop_motors(motor)
 
     def _set_angle(self):
         # set the angle for the object selected by the gui-client

@@ -11,6 +11,7 @@ except:
         BCM = 0
         OUT = 0
         IN = 0
+        BOTH = 0
         PUD_DOWN = 0
         PUD_UP = 0
         RISING = 0
