@@ -359,7 +359,7 @@ class Controller(BaseController):
         try:
             self.choose_object_id=object_id
             obj = self._sky_objects[self.choose_object_id]
-            logging.debug("set %s", obj.name)
+            logging.debug("choose %s", obj.name)
             return True
         except:
             logging.debug("could not set coordinates of object nr. %d", object_id)
@@ -375,7 +375,7 @@ class Controller(BaseController):
         """
         try:
             obj = self._sky_objects[self.choose_object_id]
-            logging.debug("mark %s", obj.name)
+            logging.debug("set %s", obj.name)
             self._observer.date = datetime.utcnow()
             obj.compute(self._observer)
             self.motors[0].angle = obj.az / ephem.degree
@@ -383,7 +383,7 @@ class Controller(BaseController):
             for i in xrange(2):
                 self._angles_steps[i].append((self.motors[i].angle, self.motors[i].steps))
         except:
-            logging.debug("could not apply coordinates of object nr. %d", object_id)
+            logging.error("no object has been choosen")
 
     def toggle_tracking(self):
         """

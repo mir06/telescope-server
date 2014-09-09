@@ -7,6 +7,9 @@ plugin to handle a the manual control
 """
 
 from time import sleep
+import numpy as np
+import thread
+
 from telescope.server.gpio import GPIO
 
 class Manual(object):
@@ -19,31 +22,37 @@ class Manual(object):
 	     9: (1, True),     # up
    	    11: (1, False),    # down
 	}
+        self._pins = self._pins_args.keys()
 	self._set_angle_pin = 10
 	GPIO.setmode(GPIO.BCM)
 	# motor control
 	for pin in self._pins_args.keys():
 	    GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-	    GPIO.add_event_detect(pin, GPIO.BOTH, self._action, bouncetime=100)
 
 	# set object angle control
-	GPIO.setup(self._set_angle_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-	GPIO.add_event_detect(self._set_angle_pin, GPIO.RISING,
-			      callback=self._set_angle, bouncetime=250)
+	GPIO.setup(self._set_angle_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-    def _action(self, pin):
-        # start or stop the motor
-        motor, direction = self._pins_args[pin]
-        # to be sure about the input signal wait a little longer
-        # than the bouncing time is
-        sleep(.1)
-        if GPIO.input(pin):
-            self.controller._start_motor(motor, direction)
-            logging.info("start motor by manual control")
-        else:
-            self.controller._stop_motors([motor])
-            logging.info("stop motor by manual control")
+        # start two threads
+        thread.start_new_thread(self._motor_control, ())
+        thread.start_new_thread(self._set_angle, ())
 
-    def _set_angle(self, pin):
+    def _motor_control(self):
+        # start and stop motors depending on button press
+        running = np.zeros(4, dtype=np.int)
+        while True:
+            current = np.array([ GPIO.input(pin) for pin in self._pins ])
+            change = np.where(np.logical_xor(current, running))[0]
+            if len(change):
+                for index in change:
+                    motor, direction = self._pins_args[self._pins[index]]
+                    self.controller._stop_motors([motor])
+                    if current[index]:
+                        self.controller._start_motor(motor, direction)
+                running = current
+            sleep(.05)
+
+    def _set_angle(self):
         # set the angle for the object selected by the gui-client
-        self.controller.apply_object()
+        while True:
+            GPIO.wait_for_edge(self._set_angle_pin, GPIO.FALLING)
+            self.controller.apply_object()
