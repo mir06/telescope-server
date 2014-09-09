@@ -204,8 +204,8 @@ class GtkClient(object):
 
         # start thread that looks if tracking is active or not
         self.tracking_thread = Thread(target=self.check_tracking)
-        # self.tracking_thread.daemon = True
-        # self.tracking_thread.start()
+        self.tracking_thread.daemon = True
+        self.tracking_thread.start()
 
         # show the main window
         self.glade.get_object("main_window").show_all()
@@ -236,12 +236,12 @@ class GtkClient(object):
             'up': Gdk.KEY_Up, 'down': Gdk.KEY_Down }
         self.key_direction = {value:key for key, value in self.direction_key.iteritems()}
         
-        try:
-            curr_steps = self.connection.get_curr_steps()
-        except:
-            curr_steps = "na/na"
-        self.glade.get_object("info_curr_steps_main").set_text(curr_steps)
-        self.glade.get_object("info_curr_steps_calib").set_text(curr_steps)        
+        # try:
+        #     curr_steps = self.connection.get_curr_steps()
+        # except:
+        #     curr_steps = "na/na"
+        # self.glade.get_object("info_curr_steps_main").set_text(curr_steps)
+        # self.glade.get_object("info_curr_steps_calib").set_text(curr_steps)        
 
     def check_tracking(self):
         """
@@ -491,12 +491,12 @@ class GtkClient(object):
 
     def onCalibrationStart(self, button):
         self.connection.start_calibration()
-        try:
-            curr_steps = self.connection.get_curr_steps()
-        except:
-            curr_steps = "na/na"
-        self.glade.get_object("info_curr_steps_main").set_text(curr_steps)
-        self.glade.get_object("info_curr_steps_calib").set_text(curr_steps)
+        # try:
+        #     curr_steps = self.connection.get_curr_steps()
+        # except:
+        #     curr_steps = "na/na"
+        # self.glade.get_object("info_curr_steps_main").set_text(curr_steps)
+        # self.glade.get_object("info_curr_steps_calib").set_text(curr_steps)
         self.glade.get_object("calibration_object").set_text("-")
         self._update_spr()
         self._update_sighted_objects()
@@ -507,22 +507,22 @@ class GtkClient(object):
         self._update_spr()
         
     def onApplyObject(self, button):
-        try:
-            curr_steps = self.connection.get_curr_steps()
-        except:
-            curr_steps = "na/na"
-        self.glade.get_object("info_curr_steps_main").set_text(curr_steps)
-        self.glade.get_object("info_curr_steps_calib").set_text(curr_steps)
+        # try:
+        #     curr_steps = self.connection.get_curr_steps()
+        # except:
+        #     curr_steps = "na/na"
+        # self.glade.get_object("info_curr_steps_main").set_text(curr_steps)
+        # self.glade.get_object("info_curr_steps_calib").set_text(curr_steps)
         self.connection.apply_object()
         self._update_sighted_objects()
 
     def onActualObject(self, button):
-        try:
-            curr_steps = self.connection.get_curr_steps()
-        except:
-            curr_steps = "na/na"
-        self.glade.get_object("info_curr_steps_main").set_text(curr_steps)
-        self.glade.get_object("info_curr_steps_calib").set_text(curr_steps)
+        # try:
+        #     curr_steps = self.connection.get_curr_steps()
+        # except:
+        #     curr_steps = "na/na"
+        # self.glade.get_object("info_curr_steps_main").set_text(curr_steps)
+        # self.glade.get_object("info_curr_steps_calib").set_text(curr_steps)
         self._update_spr()
         self._update_sighted_objects()
 
@@ -533,17 +533,14 @@ class GtkClient(object):
     def _update_sighted_objects(self):
         # update number of sighted objects
         nr = self.connection.get_number_of_sighted_objects()
-        if isinstance(nr,int ):
-            self.glade.get_object("calibration_points").set_text(nr)
-            self.glade.get_object("calibration_start").set_sensitive(int(nr)>0)
-            self.glade.get_object("calibration_stop").set_sensitive(int(nr)>1)
-
-
+        self.glade.get_object("calibration_points").set_text(nr)
+        self.glade.get_object("calibration_start").set_sensitive(int(nr)>0)
+        self.glade.get_object("calibration_stop").set_sensitive(int(nr)>1)
 
 
     def onClickObject(self, button, *data):
         obj_id = data[0]
-        obj_name=data[1]
+        obj_name = data[1]
         self.connection.set_object(obj_id)
         self.glade.get_object("calibration_object").set_text(obj_name)
         self.glade.get_object("apply_object").set_sensitive(True)
@@ -561,7 +558,6 @@ class GtkClient(object):
         # fill the objects' box with visible objects
         visible_objects = self.connection.get_visible_objects()
         n = int(ceil(sqrt(len(visible_objects))))
-        print visible_objects
         nrows = 2*n
         ncols = int(ceil(n/2))
         button_container = self.glade.get_object("object_buttons")
@@ -569,7 +565,7 @@ class GtkClient(object):
             col, row = divmod(nr, ncols)
             obj_id, obj_name = obj.split("-")
             button = Gtk.Button(label=obj_name)
-            button.connect("clicked", self.onClickObject, obj_id,obj_name)
+            button.connect("clicked", self.onClickObject, obj_id, obj_name)
             button.show()
             button.set_focus_on_click(True)
             button_container.attach(button, row, col, 1, 1)
@@ -577,11 +573,11 @@ class GtkClient(object):
         # update number of sighted objects and current spr
         self._update_sighted_objects()
         self._update_spr()
-        try:
-            curr_steps = self.connection.get_curr_steps()
-        except:
-            curr_steps = "na/na"
-        self.glade.get_object("info_curr_steps_main").set_text(curr_steps)
+        # try:
+        #     curr_steps = self.connection.get_curr_steps()
+        # except:
+        #     curr_steps = "na/na"
+        # self.glade.get_object("info_curr_steps_main").set_text(curr_steps)
         # show the dialog
         dialog = self.glade.get_object("calib_dialog")
         response = dialog.run()
@@ -647,6 +643,7 @@ class GtkClient(object):
         tracking = self.connection.get_tracking_status()
         if switch.get_active() != tracking:
             self.connection.toggle_tracking()
+
 
     def _translate_direction(self, direction):
         """
@@ -715,13 +712,12 @@ class GtkClient(object):
                 steps_per_click=int(self.glade.get_object("steps_per_click").get_value())
                 self.connection.make_step(index, bool_dir, steps_per_click)
                 sleep(0.01)
-        try:
-            curr_steps = self.connection.get_curr_steps()
-        except:
-            curr_steps = "na/na"
-            
-        self.glade.get_object("info_curr_steps_main").set_text(curr_steps)
-        self.glade.get_object("info_curr_steps_calib").set_text(curr_steps)
+        # try:
+        #     curr_steps = self.connection.get_curr_steps()
+        # except:
+        #     curr_steps = "na/na"
+        # self.glade.get_object("info_curr_steps_main").set_text(curr_steps)
+        # self.glade.get_object("info_curr_steps_calib").set_text(curr_steps)
 
     def onCursorPressed(self, widget, event, data=None):
         """
@@ -745,10 +741,10 @@ class GtkClient(object):
                 direction = self.key_direction[event.keyval]
                 index = direction in ["right", "left"]
                 self._start_stop_motor(window, direction)
-        try:
-            curr_steps = self.connection.get_curr_steps()
-        except:
-            curr_steps = "na/na"
-        self.glade.get_object("info_curr_steps_main").set_text(curr_steps)
-        self.glade.get_object("info_curr_steps_calib").set_text(curr_steps)
+        # try:
+        #     curr_steps = self.connection.get_curr_steps()
+        # except:
+        #     curr_steps = "na/na"
+        # self.glade.get_object("info_curr_steps_main").set_text(curr_steps)
+        # self.glade.get_object("info_curr_steps_calib").set_text(curr_steps)
         return True

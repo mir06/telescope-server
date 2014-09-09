@@ -2,8 +2,8 @@
 [Desktop Entry]
 Name=Telescope Client
 Comment=Manual control for the telescope server
-Exec=/usr/local/bin/telescope-client
+Exec=telescope-client
+Icon=telescope-client
 Terminal=false
 Type=Application
-Icon=telescope-client
 Categories=Science;

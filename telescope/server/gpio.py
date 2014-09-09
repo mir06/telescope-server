@@ -31,8 +31,9 @@ except:
         def add_event_detect(self, pin, edge, callback=None, bouncetime=None):
             pass
         def wait_for_edge(self, pin, edge):
-            # just sleep for some time
-            sleep(60)
+            # just sleep forever
+            while True:
+                sleep(600)
 
     GPIO = gpio()
 

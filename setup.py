@@ -41,7 +41,12 @@ the telescope easily.
         # client files
         ('/usr/local/share/applications',
          ['telescope/client/desktop/telescope-client.desktop']),
-        ('/usr/local/share/icons/hicolor/256x256', ['telescope/client/ui/telescope-client.png'])
+        ('/usr/local/share/icons/hicolor/256x256/apps', ['telescope/client/icons/256x256/telescope-client.png']),
+        ('/usr/local/share/icons/hicolor/128x128/apps', ['telescope/client/icons/128x128/telescope-client.png']),
+        ('/usr/local/share/icons/hicolor/64x64/apps', ['telescope/client/icons/64x64/telescope-client.png']),
+        ('/usr/local/share/icons/hicolor/48x48/apps', ['telescope/client/icons/48x48/telescope-client.png']),
+        ('/usr/local/share/icons/hicolor/32x32/apps', ['telescope/client/icons/32x32/telescope-client.png']),
+        ('/usr/local/share/icons/hicolor/24x24/apps', ['telescope/client/icons/24x24/telescope-client.png']),
     ],
     scripts = ['telescope-client'],
 )

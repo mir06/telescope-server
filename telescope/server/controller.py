@@ -415,7 +415,8 @@ class Controller(BaseController):
         elif status_code == status.TRACKING:
             return "tracking: %s" % (self._is_tracking and "YES" or "NO")
         elif status_code == status.SPR:
-            return "steps per revolution (az/alt): %d / %d" % tuple([m.steps_per_rev for m in self.motors])
+            return "steps per revolution (az/alt): %d / %d" % \
+                tuple([m.steps_per_rev for m in self.motors])
         elif status_code == status.AZ_ANGLES:
             return "angles/steps list for azimuth motor: %s" % self._angles_steps[0]
         elif status_code == status.ALT_ANGLES:
@@ -423,7 +424,8 @@ class Controller(BaseController):
         elif status_code == status.SIGHTED_OBJ:
             return "%d" % len(self._angles_steps[0])
         elif status_code == status.CURR_STEPS:
-            return "current steps (az/alt): %d / %d" % (self.motors[0].steps, self.motors[1].steps)
+            return "current steps (az/alt): %d / %d" % \
+                (self.motors[0].steps, self.motors[1].steps)
         elif status_code == status.VISIBLE_OBJ:
             return self._visible_objects()
         # elif status_code == status.MOTORRUN:

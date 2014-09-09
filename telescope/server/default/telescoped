@@ -8,7 +8,7 @@
 #
 # PORT - port to listen
 #
-PORT=10011
+#PORT=10000
 #
 #
 # CONTROLLER - python module that controls the telescope
@@ -25,4 +25,4 @@ PORT=10011
 #
 # LOGLEVEL - level of logging:
 #            INFO, WARNING, ERROR, CRITICAL
-LOGLEVEL=INFO
+#LOGLEVEL=ERROR
