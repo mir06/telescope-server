@@ -56,3 +56,4 @@ class Manual(object):
         while True:
             GPIO.wait_for_edge(self._set_angle_pin, GPIO.FALLING)
             self.controller.apply_object()
+            sleep(.5)

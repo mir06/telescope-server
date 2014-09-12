@@ -252,7 +252,7 @@ class GtkClient(object):
             try:
                 tracking = self.connection.get_tracking_status()
                 self.tracking_switch.set_active(tracking)
-                sleep(10)
+                sleep(1)
             except:
                 sleep(60)
 
@@ -499,7 +499,7 @@ class GtkClient(object):
         # self.glade.get_object("info_curr_steps_calib").set_text(curr_steps)
         self.glade.get_object("calibration_object").set_text("-")
         self._update_spr()
-        self._update_sighted_objects()
+        # self._update_sighted_objects()
         self.glade.get_object("apply_object").set_sensitive(False)
 
     def onCalibrationStop(self, button):
@@ -514,7 +514,7 @@ class GtkClient(object):
         # self.glade.get_object("info_curr_steps_main").set_text(curr_steps)
         # self.glade.get_object("info_curr_steps_calib").set_text(curr_steps)
         self.connection.apply_object()
-        self._update_sighted_objects()
+        # self._update_sighted_objects()
 
     def onActualObject(self, button):
         # try:
@@ -524,7 +524,7 @@ class GtkClient(object):
         # self.glade.get_object("info_curr_steps_main").set_text(curr_steps)
         # self.glade.get_object("info_curr_steps_calib").set_text(curr_steps)
         self._update_spr()
-        self._update_sighted_objects()
+        # self._update_sighted_objects()
 
     def _update_spr(self):
         spr = self.connection.get_spr()
@@ -532,10 +532,12 @@ class GtkClient(object):
 
     def _update_sighted_objects(self):
         # update number of sighted objects
-        nr = self.connection.get_number_of_sighted_objects()
-        self.glade.get_object("calibration_points").set_text(nr)
-        self.glade.get_object("calibration_start").set_sensitive(int(nr)>0)
-        self.glade.get_object("calibration_stop").set_sensitive(int(nr)>1)
+        while not self._stop_sighted_objects:
+            nr = self.connection.get_number_of_sighted_objects()
+            self.glade.get_object("calibration_points").set_text(nr)
+            self.glade.get_object("calibration_start").set_sensitive(int(nr)>0)
+            self.glade.get_object("calibration_stop").set_sensitive(int(nr)>1)
+            sleep(1)
 
 
     def onClickObject(self, button, *data):
@@ -544,7 +546,7 @@ class GtkClient(object):
         self.connection.set_object(obj_id)
         self.glade.get_object("calibration_object").set_text(obj_name)
         self.glade.get_object("apply_object").set_sensitive(True)
-        self._update_sighted_objects()
+        # self._update_sighted_objects()
 
     def onCalibrationDialog(self, widget, data=None):
         # stop eventually running motors
@@ -570,8 +572,15 @@ class GtkClient(object):
             button.set_focus_on_click(True)
             button_container.attach(button, row, col, 1, 1)
 
-        # update number of sighted objects and current spr
-        self._update_sighted_objects()
+        # update number of sighted objects 
+        # this is run in a thread because it an object can also be
+        # set by the manual control
+        self._stop_sighted_objects = False
+        self.sighted_objects_thread = Thread(target=self._update_sighted_objects)
+        self.sighted_objects_thread.daemon = True
+        self.sighted_objects_thread.start()
+
+        # update the current steps per revolution
         self._update_spr()
         # try:
         #     curr_steps = self.connection.get_curr_steps()
@@ -581,6 +590,8 @@ class GtkClient(object):
         # show the dialog
         dialog = self.glade.get_object("calib_dialog")
         response = dialog.run()
+        self._stop_sighted_objects = True
+        self.sighted_objects_thread.join()
         dialog.hide()
 
 
