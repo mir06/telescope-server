@@ -19,8 +19,8 @@ class Manual(object):
 	    # define the gpio pins and arguments for controller call
 	    22: (0, True),     # left
 	    27: (0, False),    # right
-	     9: (1, True),     # up
-   	    11: (1, False),    # down
+	    11: (1, True),     # up
+   	   9: (1, False),    # down
 	}
         self._pins = self._pins_args.keys()
 	self._set_angle_pin = 10
