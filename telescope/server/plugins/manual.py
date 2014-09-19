@@ -17,10 +17,10 @@ class Manual(object):
         self.controller = controller
 	self._pins_args = {
 	    # define the gpio pins and arguments for controller call
-	    22: (0, True),     # left
-	    27: (0, False),    # right
-	    11: (1, True),     # up
-   	   9: (1, False),    # down
+	    22: (0, False),     # left
+	    27: (0, True),      # right
+	    11: (1, False),     # up
+            9:  (1, True),      # down
 	}
         self._pins = self._pins_args.keys()
 	self._set_angle_pin = 10

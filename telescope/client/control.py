@@ -180,9 +180,6 @@ class GtkClient(object):
         settings = Gtk.Settings.get_default()
         settings.props.gtk_button_images = True
 
-        # reference some important wigdets
-        self.statusbar = self.glade.get_object("statusbar")
-
         self.navigation = self.glade.get_object("navigation")
         self.conn_button = self.glade.get_object("connection")
         self.loc_button = self.glade.get_object("location")
@@ -202,32 +199,26 @@ class GtkClient(object):
         # load preferences
         self.read_preferences()
 
-        # start thread that looks if tracking is active or not
-        self.tracking_thread = Thread(target=self.check_tracking)
-        self.tracking_thread.daemon = True
-        self.tracking_thread.start()
-
         # show the main window
         self.glade.get_object("main_window").show_all()
 
         # images / animations for buttons
-        self.navigation_buttons = {'main': {}, 'calib': {}}
-        self.button_images = {'main': {}, 'calib': {}}
+        self.navigation_buttons = {}
+        self.button_images = {}
         for direction in ['right', 'left', 'up', 'down']:
             # buttons
-            for window in self.navigation_buttons.keys():
-                self.navigation_buttons[window][direction] = \
-                  self.glade.get_object("%s_%s" % (window,direction))
+            self.navigation_buttons[direction] = \
+                self.glade.get_object("main_%s" % (direction))
 
-                # images (fixed and animated icons)
-                im = Gtk.Image()
-                im.set_from_file(os.path.join(os.path.dirname(__file__), 
-                                              "ui", "%s-animated.gif" % direction))
-                im.show()
-                self.button_images[window][direction] = dict()
-                self.button_images[window][direction]["stopped"] = \
-                  self.glade.get_object("%s_%s_arrow" % (window,direction))
-                self.button_images[window][direction]["started"] = im
+            # images (fixed and animated icons)
+            im = Gtk.Image()
+            im.set_from_file(os.path.join(os.path.dirname(__file__), 
+                                          "ui", "%s-animated.gif" % direction))
+            im.show()
+            self.button_images[direction] = dict()
+            self.button_images[direction]["stopped"] = \
+                self.glade.get_object("main_%s_arrow" % (direction))
+            self.button_images[direction]["started"] = im
 
         # initialize state variables
         self.movement = [ "", "" ]
@@ -236,12 +227,27 @@ class GtkClient(object):
             'up': Gdk.KEY_Up, 'down': Gdk.KEY_Down }
         self.key_direction = {value:key for key, value in self.direction_key.iteritems()}
         
-        # try:
-        #     curr_steps = self.connection.get_curr_steps()
-        # except:
-        #     curr_steps = "na/na"
-        # self.glade.get_object("info_curr_steps_main").set_text(curr_steps)
-        # self.glade.get_object("info_curr_steps_calib").set_text(curr_steps)        
+        # start thread that looks if tracking is active or not
+        self.tracking_thread = Thread(target=self.check_tracking)
+        self.tracking_thread.daemon = True
+        self.tracking_thread.start()
+
+        # define css for the object-buttons
+        css = """
+        GtkButton.selected {
+          background-color: red;
+          background: red;
+        }
+        """
+        style_provider = Gtk.CssProvider()
+        style_provider.load_from_data(css)
+
+        Gtk.StyleContext.add_provider_for_screen(
+            Gdk.Screen.get_default(),
+            style_provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+
 
     def check_tracking(self):
         """
@@ -335,6 +341,7 @@ class GtkClient(object):
                         # try to set the location (if there is no server just leave it)
                         try:
                             self.connection.set_location(lon, lat, alt)
+                            self._location = self.connection.get_location()
                         except:
                             pass
                         # set the active row (must be last line of name_list at this moment)
@@ -445,7 +452,6 @@ class GtkClient(object):
         dialog = self.glade.get_object("connection_dialog")
         response = dialog.run()
         if response == 0:
-            context_id = self.statusbar.get_context_id("info")
             # some values have been given check connection
             try:
                 hostname = self.glade.get_object("hostname").get_text()
@@ -456,8 +462,6 @@ class GtkClient(object):
                 self.connection = None
                 label = "could not connect to server"
 
-            self.statusbar.push(context_id, label)
-
         # check the toolbar buttons and hide the dialog
         self.check_widgets()
         dialog.hide()
@@ -466,7 +470,6 @@ class GtkClient(object):
         dialog = self.glade.get_object("location_dialog")
         response = dialog.run()
         if response == 0:
-            context_id = self.statusbar.get_context_id("info")
             try:
                 model, treeiter = self.location_tree.get_selection().get_selected()
                 self.active_location = model[treeiter][0]
@@ -479,11 +482,11 @@ class GtkClient(object):
 
                 # get formatted location
                 loc = self.connection.get_location()
+                self._location = loc
                 label = "set location: %s" % loc
             except:
                 label = "could not set location"
 
-            self.statusbar.push(context_id, label)
 
         # check the toolbar buttons and hide the dialog
         self.check_widgets()
@@ -491,67 +494,48 @@ class GtkClient(object):
 
     def onCalibrationStart(self, button):
         self.connection.start_calibration()
-        # try:
-        #     curr_steps = self.connection.get_curr_steps()
-        # except:
-        #     curr_steps = "na/na"
-        # self.glade.get_object("info_curr_steps_main").set_text(curr_steps)
-        # self.glade.get_object("info_curr_steps_calib").set_text(curr_steps)
-        self.glade.get_object("calibration_object").set_text("-")
-        self._update_spr()
-        # self._update_sighted_objects()
+        self._calibrated = False
         self.glade.get_object("apply_object").set_sensitive(False)
 
     def onCalibrationStop(self, button):
         self.connection.stop_calibration()
+        self._calibrated = True
         self._update_spr()
         
     def onApplyObject(self, button):
-        # try:
-        #     curr_steps = self.connection.get_curr_steps()
-        # except:
-        #     curr_steps = "na/na"
-        # self.glade.get_object("info_curr_steps_main").set_text(curr_steps)
-        # self.glade.get_object("info_curr_steps_calib").set_text(curr_steps)
+        """
+        add the currently selected object to the list of sighted objects
+        """
         self.connection.apply_object()
-        # self._update_sighted_objects()
-
-    def onActualObject(self, button):
-        # try:
-        #     curr_steps = self.connection.get_curr_steps()
-        # except:
-        #     curr_steps = "na/na"
-        # self.glade.get_object("info_curr_steps_main").set_text(curr_steps)
-        # self.glade.get_object("info_curr_steps_calib").set_text(curr_steps)
-        self._update_spr()
-        # self._update_sighted_objects()
+        # reset all the object buttons
+        for btn in self.glade.get_object("object_buttons").get_children():
+            ctx = btn.get_style_context()
+            ctx.remove_class('selected')
+        
 
     def _update_spr(self):
         spr = self.connection.get_spr()
-        self.glade.get_object("current_spr").set_text(spr)
-
-    def _update_sighted_objects(self):
-        # update number of sighted objects
-        while not self._stop_sighted_objects:
-            nr = self.connection.get_number_of_sighted_objects()
-            self.glade.get_object("calibration_points").set_text(nr)
-            self.glade.get_object("calibration_start").set_sensitive(int(nr)>0)
-            self.glade.get_object("calibration_stop").set_sensitive(int(nr)>1)
-            sleep(1)
-
+        self._spr = spr
 
     def onClickObject(self, button, *data):
+        # set the background color of the button to red
+        # and all others to gray
+        for btn in button.get_parent().get_children():
+            ctx = btn.get_style_context()
+            if btn == button:
+                ctx.add_class('selected')
+            else:
+                ctx.remove_class('selected')
+
         obj_id = data[0]
         obj_name = data[1]
         self.connection.set_object(obj_id)
-        self.glade.get_object("calibration_object").set_text(obj_name)
         self.glade.get_object("apply_object").set_sensitive(True)
-        # self._update_sighted_objects()
 
     def onCalibrationDialog(self, widget, data=None):
         # stop eventually running motors
-        self._start_stop_motor('main', 'right', force_stop=True)
-        self._start_stop_motor('main', 'up', force_stop=True)
+        self._start_stop_motor('right', force_stop=True)
+        self._start_stop_motor('up', force_stop=True)
 
         # stop tracking
         if self.connection.get_tracking_status():
@@ -563,7 +547,7 @@ class GtkClient(object):
         nrows = 2*n
         ncols = int(ceil(n/2))
         button_container = self.glade.get_object("object_buttons")
-        for nr,obj in enumerate(visible_objects):
+        for nr, obj in enumerate(visible_objects):
             col, row = divmod(nr, ncols)
             obj_id, obj_name = obj.split("-")
             button = Gtk.Button(label=obj_name)
@@ -572,80 +556,91 @@ class GtkClient(object):
             button.set_focus_on_click(True)
             button_container.attach(button, row, col, 1, 1)
 
-        # update number of sighted objects 
-        # this is run in a thread because it an object can also be
-        # set by the manual control
-        self._stop_sighted_objects = False
-        self.sighted_objects_thread = Thread(target=self._update_sighted_objects)
-        self.sighted_objects_thread.daemon = True
-        self.sighted_objects_thread.start()
 
-        # update the current steps per revolution
-        self._update_spr()
-        # try:
-        #     curr_steps = self.connection.get_curr_steps()
-        # except:
-        #     curr_steps = "na/na"
-        # self.glade.get_object("info_curr_steps_main").set_text(curr_steps)
-        # show the dialog
-        dialog = self.glade.get_object("calib_dialog")
-        response = dialog.run()
-        self._stop_sighted_objects = True
-        self.sighted_objects_thread.join()
-        dialog.hide()
+        # reveal the calibration box
+        revealer = self.glade.get_object("calibration_revealer")
+        if revealer.get_reveal_child():
+            revealer.set_reveal_child(False)
+        else:
+            revealer.set_reveal_child(True)
+            # also reveal the info box (if it's not already)
+            info_revealer = self.glade.get_object("info_revealer")
+            if not info_revealer.get_reveal_child():
+                self.onInfoDialog(None)
 
 
+    def _get_info(self, revealer):
+        """
+        thread that polls info as long as info revealer is shown
+        """
+        while revealer.get_reveal_child():
+            # get information from the server
+            try:
+                location = self._location
+            except:
+                location = "No location information"
+
+            try:
+                radec = self.connection.get_radec()
+            except:
+                radec = "na/na"
+
+            try:
+                azalt = self.connection.get_azalt()
+            except:
+                azalt = "na/na"
+
+            try:
+                calibrated = self.connection.get_calibration_status(False)
+            except:
+                calibrated = "na"
+
+            try:
+                nr = self.connection.get_number_of_sighted_objects()
+                self.glade.get_object("calibration_start").set_sensitive(int(nr)>0)
+                self.glade.get_object("calibration_stop").set_sensitive(int(nr)>1)
+            except:
+                nr = "na"
+
+            try:
+                spr = self._spr
+            except:
+                spr = "na/na"
+
+            try:
+                curr_steps = self.connection.get_curr_steps()
+            except:
+                curr_steps = "na/na"
+
+            self.glade.get_object("info_location").set_text(location)
+            self.glade.get_object("info_radec").set_text(radec)
+            self.glade.get_object("info_azalt").set_text(azalt)
+            self.glade.get_object("info_calibrated").set_text(calibrated)
+            self.glade.get_object("info_sighted_objects").set_text(nr)
+            self.glade.get_object("info_spr").set_text(spr)
+            self.glade.get_object("info_curr_steps").set_text(curr_steps)
+            sleep(1)
+            
     def onInfoDialog(self, widget, data=None):
         """
-        get information of the telescope server
+        toggle infomartion revelaer
         """
-        dialog = self.glade.get_object("info_dialog")
+        info_revealer = self.glade.get_object("info_revealer")
+        # get the current steps per revolution
+        spr = self.connection.get_spr()
+        self._spr = spr
+        if info_revealer.get_reveal_child():
+            info_revealer.set_reveal_child(False)
+            try:
+                self._info_thread.join()
+            except:
+                pass
+        else:
+            info_revealer.set_reveal_child(True)
+            self._info_thread = Thread(target=self._get_info, args=[info_revealer])
+            self._info_thread.daemon = True
+            self._info_thread.start()
 
-        # get information from the server
-        try:
-            location = self.connection.get_location()
-        except:
-            location = "No location information"
-
-        try:
-            radec = self.connection.get_radec()
-        except:
-            radec = "na/na"
-
-        try:
-            azalt = self.connection.get_azalt()
-        except:
-            azalt = "na/na"
-
-        try:
-            calibrated = self.connection.get_calibration_status(False)
-        except:
-            calibrated = "na"
-
-        try:
-            tracking = self.connection.get_tracking_status(False)
-        except:
-            tracking = "na"
-
-        try:
-            spr = self.connection.get_spr()
-        except:
-            spr = "na/na"
-        try:
-            curr_steps = self.connection.get_curr_steps()
-        except:
-            curr_steps = "na/na"
-            
-        self.glade.get_object("info_location").set_text(location)
-        self.glade.get_object("info_radec").set_text(radec)
-        self.glade.get_object("info_azalt").set_text(azalt)
-        self.glade.get_object("info_calibrated").set_text(calibrated)
-        self.glade.get_object("info_tracking").set_text(tracking)
-        self.glade.get_object("info_spr").set_text(spr)
-        self.glade.get_object("info_curr_steps").set_text(curr_steps)
-
-        response = dialog.run()
-        dialog.hide()
 
     def onToggleTracking(self, switch, gparam):
         """
@@ -659,17 +654,16 @@ class GtkClient(object):
     def _translate_direction(self, direction):
         """
         return tuple to a given direction containing:
-          index (0-azimuthal, 1-altitudinal), direction as True,False and the opposite direction
-
+        index (0-azimuthal, 1-altitudinal), direction as True,False and the opposite direction
         """
         az = [ "left", "right" ]
         alt = [ "up", "down" ]
         try:
-            return 0,direction=="left",az[az.index(direction)-1]
+            return 0, direction=="right", az[az.index(direction)-1]
         except:
-            return 1,direction=="up",alt[alt.index(direction)-1]
+            return 1, direction=="down", alt[alt.index(direction)-1]
 
-    def _start_stop_motor(self, window, direction, force_stop=False, cont=False):
+    def _start_stop_motor(self, direction, force_stop=False, cont=False):
         """
         start and stop motors depending on current state
         can be overruled by optional paramters
@@ -686,8 +680,12 @@ class GtkClient(object):
         if force_stop:
             if self.movement[index] != "":
                 self.movement[index] = ""
-                self.navigation_buttons[window][direction].set_image(self.button_images[window][direction]['stopped'])
-                self.navigation_buttons[window][other_dir].set_image(self.button_images[window][other_dir]['stopped'])
+                self.navigation_buttons[direction].set_image(
+                    self.button_images[direction]['stopped']
+                )
+                self.navigation_buttons[other_dir].set_image(
+                    self.button_images[other_dir]['stopped']
+                )
                 self.connection.start_stop_motor(index, False)
                 return True
             else:
@@ -696,13 +694,19 @@ class GtkClient(object):
         # start or stop a motor depending on the direction it is currently running
         if self.movement[index] != direction:
             self.movement[index] = direction
-            self.navigation_buttons[window][direction].set_image(self.button_images[window][direction]['started'])
-            self.navigation_buttons[window][other_dir].set_image(self.button_images[window][other_dir]['stopped'])
+            self.navigation_buttons[direction].set_image(
+                self.button_images[direction]['started']
+            )
+            self.navigation_buttons[other_dir].set_image(
+                self.button_images[other_dir]['stopped']
+            )
             self.connection.start_stop_motor(index, True, bool_dir)
         else:
             if not cont:
                 self.movement[index] = ""
-                self.navigation_buttons[window][direction].set_image(self.button_images[window][direction]['stopped'])
+                self.navigation_buttons[direction].set_image(
+                    self.button_images[direction]['stopped']
+                )
                 self.connection.start_stop_motor(index, False)
         return True
 
@@ -715,20 +719,14 @@ class GtkClient(object):
         # right click starts/stops motor
         # left click does steps_per_click steps (and stops running motor)
         if event.button == 3:
-            self._start_stop_motor(window, direction)
+            self._start_stop_motor(direction)
 
         elif event.button == 1:
-            if not self._start_stop_motor(window, direction, force_stop=True):
+            if not self._start_stop_motor(direction, force_stop=True):
                 index, bool_dir, other_dir = self._translate_direction(direction)
-                steps_per_click=int(self.glade.get_object("steps_per_click").get_value())
+                steps_per_click = int(self.glade.get_object("steps_per_click").get_value())
                 self.connection.make_step(index, bool_dir, steps_per_click)
                 sleep(0.01)
-        # try:
-        #     curr_steps = self.connection.get_curr_steps()
-        # except:
-        #     curr_steps = "na/na"
-        # self.glade.get_object("info_curr_steps_main").set_text(curr_steps)
-        # self.glade.get_object("info_curr_steps_calib").set_text(curr_steps)
 
     def onCursorPressed(self, widget, event, data=None):
         """
@@ -738,8 +736,7 @@ class GtkClient(object):
         if self.navigation.get_sensitive():
             if event.keyval in self.direction_key.values():
                 direction = self.key_direction[event.keyval]
-                self._start_stop_motor(window, direction, cont=True)
-
+                self._start_stop_motor(direction, cont=True)
         return True
 
     def onCursorReleased(self, widget, event, data=None):
@@ -751,11 +748,5 @@ class GtkClient(object):
             if event.keyval in self.direction_key.values():
                 direction = self.key_direction[event.keyval]
                 index = direction in ["right", "left"]
-                self._start_stop_motor(window, direction)
-        # try:
-        #     curr_steps = self.connection.get_curr_steps()
-        # except:
-        #     curr_steps = "na/na"
-        # self.glade.get_object("info_curr_steps_main").set_text(curr_steps)
-        # self.glade.get_object("info_curr_steps_calib").set_text(curr_steps)
+                self._start_stop_motor(direction)
         return True

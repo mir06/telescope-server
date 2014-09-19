@@ -97,7 +97,7 @@ class Motor(object):
             logging.debug("INPUT -- %s: actual_step/steps/direction: %d / %d / %d",
                           self.name, self._steps, steps, direction)
             self._stop = False
-            GPIO.output(self.DIR, not direction)
+            GPIO.output(self.DIR, direction)
             for step in xrange(steps):
                 try:
                     step_delay = self._accel_curve[min(step, abs(step-(steps-1)))]
