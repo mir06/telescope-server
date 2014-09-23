@@ -4,13 +4,26 @@
 
 import time
 import logging
-from math import cos, pi
+from math import cos, pi, pow
 
 from gpio import GPIO
 
 class Motor(object):
+
     def __init__(self, name, pins, min_angle=-5, max_angle=365,
-                 positive=1, accel_steps=100, accel_start_delay=.001):
+                 positive=1, vend=10000, vstart=20, skewness=.75, accel_steps=4000):
+        def _accel_velocity(x):
+            """
+            calculate the acceleration/deceleration velocity in the interval [0,1]
+            """
+            return (.5-.5*cos(x*pi))*(vend-vstart)+vstart
+            
+        def _accel_skewing(x):
+            """
+            skew the velocity cosine by a parabolic function
+            """
+            return pow(x, skewness)/pow(accel_steps, skewness)
+
         self.name = name
         self.PUL, self.DIR, self.ENBL = pins
         self._steps_per_rev = 0
@@ -20,14 +33,15 @@ class Motor(object):
         self._max_angle = max_angle
         self._steps = 0
         self._stop = True
-        self._delay = 1e-04
+        self._delay = 1./vend
         self._positive = positive
         for p in pins:
             GPIO.setup(p, GPIO.OUT)
             GPIO.output(p, False)
 
-        self._accel_curve = [ .5*accel_start_delay*(1.+cos(x*pi/accel_steps)) 
-                              for x in xrange(accel_steps)]
+        self._accel_curve = [ 1./_accel_velocity(_accel_skewing(x)) \
+                              for x in xrange(accel_steps) ]
+
     def __str__(self):
         return self.name
 
@@ -94,6 +108,7 @@ class Motor(object):
 
     def step(self, steps, direction):
         if steps:
+            delay = 0
             logging.debug("INPUT -- %s: actual_step/steps/direction: %d / %d / %d",
                           self.name, self._steps, steps, direction)
             self._stop = False
@@ -102,7 +117,7 @@ class Motor(object):
                 try:
                     step_delay = self._accel_curve[min(step, abs(step-(steps-1)))]
                 except:
-                    step_dely = 0.
+                    step_delay = self._delay
 
                 if self._stop or \
                    (self._angle <= self._minimum and not direction) or \
@@ -117,7 +132,7 @@ class Motor(object):
                 if self._steps_per_rev > 0:
                     self._angle += (direction-.5)*(self._positive*720./self._steps_per_rev)
                     self._angle %= 360
-                time.sleep(self._delay+step_delay)
+                time.sleep(step_delay)
             logging.debug("END -- %s: actual_step/steps/direction: %d / %d / %d",
                           self.name, self._steps, steps, direction)
          

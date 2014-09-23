@@ -6,7 +6,7 @@ from distutils.core import setup
 import platform
 
 # check if this is windows --> no data-files installation
-data_files = platform.system() == 'Window' and [] or \
+data_files = platform.system() == 'Windows' and [] or \
              [
                  # server files
                  ('/usr/local/sbin', ['telescope-server']),

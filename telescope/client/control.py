@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+ # -*- coding: utf-8 -*-
 # Copyright: Armin Leuprecht <mir@mur.at> and Stephan Burger <stephan101@gmail.com>
 # License: GNU GPL version 3; http://www.gnu.org/licenses/gpl.txt
 
@@ -55,6 +55,8 @@ class Connector(object):
             sock.sendall(data.tobytes())
             response = sock.recv(1024)
             return response
+        except:
+            pass
         finally:
             sock.close()
 
