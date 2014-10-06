@@ -14,7 +14,7 @@ from math import sqrt, ceil
 try:
     from gi.repository import Gtk
     from gi.repository import Gdk
-    from gi.repository import GObject as gobject
+    from gi.repository import GLib
 except:
     sys.exit(1)
 
@@ -263,7 +263,7 @@ class GtkClient(object):
             try:
                 # check and set the tracking status
                 tracking = self.connection.get_tracking_status()
-                gobject.idle_add(self.tracking_switch.set_active, tracking)
+                GLib.idle_add(self.tracking_switch.set_active, tracking)
                 if info_revealer.get_reveal_child():
                     try:
                         location = self._location
@@ -287,8 +287,10 @@ class GtkClient(object):
 
                     try:
                         nr = self.connection.get_number_of_sighted_objects()
-                        self.glade.get_object("calibration_start").set_sensitive(int(nr)>0)
-                        self.glade.get_object("calibration_stop").set_sensitive(int(nr)>1)
+                        GLib.idle_add(self.glade.get_object("calibration_start").set_sensitive,
+                                      int(nr)>0)
+                        GLib.idle_add(self.glade.get_object("calibration_stop").set_sensitive,
+                                      int(nr)>1)
                     except:
                         nr = "na"
 
@@ -302,14 +304,15 @@ class GtkClient(object):
                     except:
                         curr_steps = "na/na"
 
-                    gobject.idle_add(self.glade.get_object("info_location").set_text, location)
-                    gobject.idle_add(self.glade.get_object("info_radec").set_text, radec)
-                    gobject.idle_add(self.glade.get_object("info_azalt").set_text, azalt)
-                    gobject.idle_add(self.glade.get_object("info_calibrated").set_text, calibrated)
-                    gobject.idle_add(self.glade.get_object("info_sighted_objects").set_text, nr)
-                    gobject.idle_add(self.glade.get_object("info_spr").set_text, spr)
-                    gobject.idle_add(self.glade.get_object("info_curr_steps").set_text, curr_steps)
-                    
+                    GLib.idle_add(self.glade.get_object("info_location").set_text, location)
+                    GLib.idle_add(self.glade.get_object("info_radec").set_text, radec)
+                    GLib.idle_add(self.glade.get_object("info_azalt").set_text, azalt)
+                    GLib.idle_add(self.glade.get_object("info_calibrated").set_text, calibrated)
+                    GLib.idle_add(self.glade.get_object("info_sighted_objects").set_text, nr)
+                    GLib.idle_add(self.glade.get_object("info_spr").set_text, spr)
+                    GLib.idle_add(self.glade.get_object("info_curr_steps").set_text, curr_steps)
+                                
+                # end of information revealer update
 
                 sleep(1)
 
@@ -624,14 +627,6 @@ class GtkClient(object):
                 self.onInfoDialog(None)
 
 
-    def _get_info(self, revealer):
-        """
-        thread that polls info as long as info revealer is shown
-        """
-        while revealer.get_reveal_child():
-            # get information from the server
-            sleep(1)
-            
     def onInfoDialog(self, widget, data=None):
         """
         toggle infomartion revelaer
