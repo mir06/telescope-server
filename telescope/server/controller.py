@@ -35,8 +35,8 @@ class Controller(BaseController):
 
         # initialize the motors
         self.motors = [
-            Motor("Azimuth", self.az_pins, positive=1),
-            Motor("Altitude", self.alt_pins, positive=-1)
+            Motor("Azimuth", self.az_pins, positive=-1),
+            Motor("Altitude", self.alt_pins, positive=1)
         ]
 
         # initialize observer and target

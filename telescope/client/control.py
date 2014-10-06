@@ -14,6 +14,7 @@ from math import sqrt, ceil
 try:
     from gi.repository import Gtk
     from gi.repository import Gdk
+    from gi.repository import GObject as gobject
 except:
     sys.exit(1)
 
@@ -229,10 +230,10 @@ class GtkClient(object):
             'up': Gdk.KEY_Up, 'down': Gdk.KEY_Down }
         self.key_direction = {value:key for key, value in self.direction_key.iteritems()}
         
-        # start thread that looks if tracking is active or not
-        self.tracking_thread = Thread(target=self.check_tracking)
-        self.tracking_thread.daemon = True
-        self.tracking_thread.start()
+        # start thread that query the server status
+        self.query_thread = Thread(target=self.check_server)
+        self.query_thread.daemon = True
+        self.query_thread.start()
 
         # define css for the object-buttons
         css = """
@@ -251,18 +252,69 @@ class GtkClient(object):
         )
 
 
-    def check_tracking(self):
+    def check_server(self):
         """
-        check if telescope server is tracking
-        and set the switch accordingly
+        queries the server for its status
+        always ask for tracking status, other information is fetched
+        only when the information revealer is opened
         """
+        info_revealer = self.glade.get_object("info_revealer")
         while True:
             try:
+                # check and set the tracking status
                 tracking = self.connection.get_tracking_status()
-                self.tracking_switch.set_active(tracking)
+                gobject.idle_add(self.tracking_switch.set_active, tracking)
+                if info_revealer.get_reveal_child():
+                    try:
+                        location = self._location
+                    except:
+                        location = "No location information"
+
+                    try:
+                        radec = self.connection.get_radec()
+                    except:
+                        radec = "na/na"
+
+                    try:
+                        azalt = self.connection.get_azalt()
+                    except:
+                        azalt = "na/na"
+
+                    try:
+                        calibrated = self.connection.get_calibration_status(False)
+                    except:
+                        calibrated = "na"
+
+                    try:
+                        nr = self.connection.get_number_of_sighted_objects()
+                        self.glade.get_object("calibration_start").set_sensitive(int(nr)>0)
+                        self.glade.get_object("calibration_stop").set_sensitive(int(nr)>1)
+                    except:
+                        nr = "na"
+
+                    try:
+                        spr = self._spr
+                    except:
+                        spr = "na/na"
+
+                    try:
+                        curr_steps = self.connection.get_curr_steps()
+                    except:
+                        curr_steps = "na/na"
+
+                    gobject.idle_add(self.glade.get_object("info_location").set_text, location)
+                    gobject.idle_add(self.glade.get_object("info_radec").set_text, radec)
+                    gobject.idle_add(self.glade.get_object("info_azalt").set_text, azalt)
+                    gobject.idle_add(self.glade.get_object("info_calibrated").set_text, calibrated)
+                    gobject.idle_add(self.glade.get_object("info_sighted_objects").set_text, nr)
+                    gobject.idle_add(self.glade.get_object("info_spr").set_text, spr)
+                    gobject.idle_add(self.glade.get_object("info_curr_steps").set_text, curr_steps)
+                    
+
                 sleep(1)
+
             except:
-                sleep(60)
+                sleep(5)
 
     def write_preferences(self):
         """
@@ -409,10 +461,11 @@ class GtkClient(object):
             except ValueError:
                 pass
         return
+
     def run(self):
         """
-	      Startet die zentrale Warteschleife von Gtk
-	      """
+	run the gtk main loop
+        """
         try:
             Gtk.main()
         except KeyboardInterrupt:
@@ -577,50 +630,6 @@ class GtkClient(object):
         """
         while revealer.get_reveal_child():
             # get information from the server
-            try:
-                location = self._location
-            except:
-                location = "No location information"
-
-            try:
-                radec = self.connection.get_radec()
-            except:
-                radec = "na/na"
-
-            try:
-                azalt = self.connection.get_azalt()
-            except:
-                azalt = "na/na"
-
-            try:
-                calibrated = self.connection.get_calibration_status(False)
-            except:
-                calibrated = "na"
-
-            try:
-                nr = self.connection.get_number_of_sighted_objects()
-                self.glade.get_object("calibration_start").set_sensitive(int(nr)>0)
-                self.glade.get_object("calibration_stop").set_sensitive(int(nr)>1)
-            except:
-                nr = "na"
-
-            try:
-                spr = self._spr
-            except:
-                spr = "na/na"
-
-            try:
-                curr_steps = self.connection.get_curr_steps()
-            except:
-                curr_steps = "na/na"
-
-            self.glade.get_object("info_location").set_text(location)
-            self.glade.get_object("info_radec").set_text(radec)
-            self.glade.get_object("info_azalt").set_text(azalt)
-            self.glade.get_object("info_calibrated").set_text(calibrated)
-            self.glade.get_object("info_sighted_objects").set_text(nr)
-            self.glade.get_object("info_spr").set_text(spr)
-            self.glade.get_object("info_curr_steps").set_text(curr_steps)
             sleep(1)
             
     def onInfoDialog(self, widget, data=None):
@@ -633,16 +642,8 @@ class GtkClient(object):
         self._spr = spr
         if info_revealer.get_reveal_child():
             info_revealer.set_reveal_child(False)
-            try:
-                self._info_thread.join()
-            except:
-                pass
         else:
             info_revealer.set_reveal_child(True)
-            self._info_thread = Thread(target=self._get_info, args=[info_revealer])
-            self._info_thread.daemon = True
-            self._info_thread.start()
-
 
     def onToggleTracking(self, switch, gparam):
         """
@@ -661,9 +662,9 @@ class GtkClient(object):
         az = [ "left", "right" ]
         alt = [ "up", "down" ]
         try:
-            return 0, direction=="right", az[az.index(direction)-1]
+            return 0, direction=="left", az[az.index(direction)-1]
         except:
-            return 1, direction=="down", alt[alt.index(direction)-1]
+            return 1, direction=="up", alt[alt.index(direction)-1]
 
     def _start_stop_motor(self, direction, force_stop=False, cont=False):
         """
