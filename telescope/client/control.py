@@ -657,9 +657,9 @@ class GtkClient(object):
         az = [ "left", "right" ]
         alt = [ "up", "down" ]
         try:
-            return 0, direction=="left", az[az.index(direction)-1]
+            return 0, direction=="right", az[az.index(direction)-1]
         except:
-            return 1, direction=="up", alt[alt.index(direction)-1]
+            return 1, direction=="down", alt[alt.index(direction)-1]
 
     def _start_stop_motor(self, direction, force_stop=False, cont=False):
         """
