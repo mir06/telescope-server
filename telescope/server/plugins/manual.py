@@ -45,9 +45,9 @@ class Manual(object):
             if len(change):
                 for index in change:
                     motor, direction = self._pins_args[self._pins[index]]
-                    self.controller._stop_motors([motor])
+                    self.controller.start_stop_motor(motor, False, True)
                     if current[index]:
-                        self.controller._start_motor(motor, direction)
+                        self.controller.start_stop_motor(motor, True, direction)
                 running = current
             sleep(.05)
 
