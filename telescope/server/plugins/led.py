@@ -10,6 +10,8 @@ import thread
 from time import sleep
 from telescope.server.gpio import GPIO
 
+import logging
+
 class Led(object):
     def __init__(self, controller):
         self.controller = controller
@@ -18,7 +20,7 @@ class Led(object):
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(self.status_pin, GPIO.OUT)
         thread.start_new_thread(self._blinking, ())
-        thread.start_new_thread(self._check_tracking, ())
+        thread.start_new_thread(self._check_status, ())
 
     def _blinking(self):
         # running forever with the current blink rate
@@ -28,14 +30,19 @@ class Led(object):
             GPIO.output(self.status_pin, True)        
             sleep(self._blink_delay)
 
-    def _check_tracking(self):
+    def _check_status(self):
+        # check if some client is connected and if so
         # check if object is tracked and adjust blinking speed
         while True:
+            logging.debug("blink rate: %f", self._blink_delay)
             try:
-                if self.controller._is_tracking:
-                    self._blink_delay = .5
+                if not self.controller.client_connected:
+                    self._blink_delay = .25
                 else:
-                    self._blink_delay = 1
+                    if self.controller._is_tracking:
+                        self._blink_delay = .5
+                    else:
+                        self._blink_delay = 1
             except:
                 self._blink_delay = 3
             sleep(3)

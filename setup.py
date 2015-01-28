@@ -52,6 +52,7 @@ the telescope easily.
 """,
     keywords=['stellarium', 'telescope', 'raspberry pi',],
     license='GPL v3',
+    download_url = 'https://github.com/mir06/telescope/tarball/1.0',
     maintainer='Armin Leuprecht',
     maintainer_email='mir@mur.at',
     packages=['telescope', 'telescope.server', 'telescope.server.plugins',

@@ -10,7 +10,7 @@ import ephem.stars
 
 from numpy import median
 
-from threading import Thread
+from threading import Thread, Timer
 from datetime import datetime
 from time import sleep
 from itertools import combinations
@@ -64,11 +64,13 @@ class Controller(BaseController):
         az_default_spr=1300000
         alt_default_spr=1500000
 
-        ######################## test #####################
         self.motors[0].steps_per_rev = az_default_spr
         self.motors[1].steps_per_rev = alt_default_spr
 
-
+        # at startup no client is connected
+        self._client_connected = False
+        
+        
     @property
     def location(self):
         return "%s / %s / %s" % (self._observer.lon, self._observer.lat, self._observer.elev)
@@ -96,9 +98,9 @@ class Controller(BaseController):
     def is_tracking(self):
         return self._is_tracking()
 
-    # @property
-    # def _is_motorrun(self):
-    #     return not all([ m.stop for m in self.motors ])        
+    @property
+    def client_connected(self):
+        return self._client_connected
 
     def _set_step_delay(self, motor_index, delay):
         """
@@ -195,6 +197,12 @@ class Controller(BaseController):
             if obj.alt > 0:
                 ret.append("%d-%s" % (i, obj.name))
         return ','.join(ret)
+
+    def _reset_client_connection(self):
+        """
+        reset the client connected flag
+        """
+        self._client_connected = False
 
     def goto(self, ra, dec):
         """
@@ -413,6 +421,15 @@ class Controller(BaseController):
         elif status_code == status.CALIBRATED:
             return "calibrated: %s" % (self.calibrated and "YES" or "NO")
         elif status_code == status.TRACKING:
+            # tracking is checked every second so set a timer to indicate that
+            # a client is connected
+            try:
+                self._conn_timer.cancel()
+            except:
+                pass
+            self._client_connected = True
+            self._conn_timer = Timer(3, self._reset_client_connection)
+            self._conn_timer.start()
             return "tracking: %s" % (self._is_tracking and "YES" or "NO")
         elif status_code == status.SPR:
             return "steps per revolution (az/alt): %d / %d" % \
