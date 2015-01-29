@@ -61,8 +61,8 @@ class Controller(BaseController):
         # initialize motor threads
         self._motor_threads = [ None, None ]
         
-        az_default_spr=1300000
-        alt_default_spr=1500000
+        az_default_spr=1293009
+        alt_default_spr=1560660
 
         self.motors[0].steps_per_rev = az_default_spr
         self.motors[1].steps_per_rev = alt_default_spr

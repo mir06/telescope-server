@@ -6,10 +6,13 @@
 plugin to toggle tracking
 """
 import thread
+from time import sleep
+
 from telescope.server.gpio import GPIO
 
 class Track(object):
     def __init__(self, controller):
+	self.controller = controller
         self._track_pin = 17
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(self._track_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
