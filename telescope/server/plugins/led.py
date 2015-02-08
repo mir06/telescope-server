@@ -16,7 +16,7 @@ class Led(object):
     def __init__(self, controller):
         self.controller = controller
         self.status_pin = 2
-        self._blink_delay = 5
+        self._blink_delay = 6
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(self.status_pin, GPIO.OUT)
         thread.start_new_thread(self._blinking, ())
