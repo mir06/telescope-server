@@ -5,7 +5,9 @@
 """
 plugin to handle a led
 """
-
+import socket
+import fcntl
+import struct
 import thread
 from time import sleep
 from telescope.server.gpio import GPIO
@@ -17,7 +19,6 @@ class Led(object):
         self.controller = controller
         self.status_pin = 2
         self._blink_delay = 5
-        GPIO.setmode(GPIO.BCM)
         GPIO.setup(self.status_pin, GPIO.OUT)
         thread.start_new_thread(self._blinking, ())
         thread.start_new_thread(self._check_status, ())
@@ -36,16 +37,24 @@ class Led(object):
         while True:
             logging.debug("blink rate: %f", self._blink_delay)
             try:
-                if not self.controller.client_connected:
-                    self._blink_delay = .25
-                else:
-                    if self.controller._is_tracking:
-                        self._blink_delay = .5
-                    else:
+                if self.controller._is_tracking:
+                     self._blink_delay = .5
+                elif not self.controller.client_connected:
+                    try:
+                        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                        ipnummer=socket.inet_ntoa(fcntl.ioctl(
+                            s.fileno(),
+                            0x8915,  # SIOCGIFADDR
+                            struct.pack('256s', 'wlan0'[:15])
+                            )[20:24])
                         self._blink_delay = 1
+                    except:
+                        self._blink_delay =.125
+                else:
+                    self._blink_delay = 2
             except:
-                self._blink_delay = 3
-            sleep(3)
+                self._blink_delay = 5 
+            sleep(2)
 
     @property
     def blink_delay(self):
