@@ -10,6 +10,8 @@ from time import sleep
 
 from telescope.server.gpio import GPIO
 
+import logging
+
 class Track(object):
     def __init__(self, controller):
 	self.controller = controller
@@ -24,5 +26,6 @@ class Track(object):
         """
         while True:
             GPIO.wait_for_edge(self._track_pin, GPIO.FALLING)
+            logging.debug("tracking edge") 
             self.controller.toggle_tracking()
             sleep(.5)
