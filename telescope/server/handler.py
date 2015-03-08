@@ -19,6 +19,8 @@ import threading
 
 from telescope.common.protocol import command, status
 
+import logging
+
 class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
     def _stellarium2coords(self, ra_uint, dec_int):
         return (ra_uint*12./2147483648, dec_int*90./1073741824)
@@ -90,7 +92,7 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
                 data = ConstBitStream(bytes=data0, length=160)
                 msize = data.read('intle:16')
                 mtype = data.read('intle:16')
-
+                logging.debug("mtype: %s ", mtype)
                 if mtype == command.STELLARIUM:
                     # stellarium telescope client
                     ra, dec = self._unpack_stellarium(data)
@@ -172,6 +174,7 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
                     status_code = self._unpack_data(data, 'intle:16')
                     try:
                         response = self.server.controller.get_status(status_code)
+                        logging.debug("response: %s ", response)
                         self.request.sendall(response)
                         sleep(.01)
                     except:
