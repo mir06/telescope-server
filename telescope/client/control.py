@@ -14,7 +14,7 @@ from math import sqrt, ceil
 try:
     from gi.repository import Gtk
     from gi.repository import Gdk
-    from gi.repository import GLib
+    from gi.repository import GObject
 except:
     sys.exit(1)
 
