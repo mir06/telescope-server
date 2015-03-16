@@ -26,7 +26,7 @@ class Manual(object):
 	}
         self._pins = self._pins_args.keys()
 	self._set_angle_pin = 10
-	GPIO.setmode(GPIO.BCM)
+
 	# motor control
 	for pin in self._pins_args.keys():
 	    GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)

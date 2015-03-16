@@ -591,41 +591,42 @@ class GtkClient(object):
         self.glade.get_object("apply_object").set_sensitive(True)
 
     def onCalibrationDialog(self, widget, data=None):
-        # stop eventually running motors
-        self._start_stop_motor('right', force_stop=True)
-        self._start_stop_motor('up', force_stop=True)
-
-        # stop tracking
-        if self.connection.get_tracking_status():
-            self.connection.toggle_tracking()
-
-        # fill the objects' box with visible objects
-        visible_objects = self.connection.get_visible_objects()
-        n = int(ceil(sqrt(len(visible_objects))))
-        nrows = 2*n
-        ncols = int(ceil(n/2))
-        button_container = self.glade.get_object("object_buttons")
-        for nr, obj in enumerate(visible_objects):
-            col, row = divmod(nr, ncols)
-            obj_id, obj_name = obj.split("-")
-            button = Gtk.Button(label=obj_name)
-            button.connect("clicked", self.onClickObject, obj_id, obj_name)
-            button.show()
-            button.set_focus_on_click(True)
-            button_container.attach(button, row, col, 1, 1)
-
-
         # reveal the calibration box
         revealer = self.glade.get_object("calibration_revealer")
         if revealer.get_reveal_child():
             revealer.set_reveal_child(False)
         else:
+            # stop eventually running motors
+            self._start_stop_motor('right', force_stop=True)
+            self._start_stop_motor('up', force_stop=True)
+
+            # stop tracking
+            if self.connection.get_tracking_status():
+                self.connection.toggle_tracking()
+
+            # build all widget for the calibration revealer
+            # fill the objects' box with visible objects
+            visible_objects = self.connection.get_visible_objects()
+            n = int(ceil(sqrt(len(visible_objects))))
+            nrows = 2*n
+            ncols = int(ceil(n/2))
+            button_container = self.glade.get_object("object_buttons")
+            for nr, obj in enumerate(visible_objects):
+                col, row = divmod(nr, ncols)
+                obj_id, obj_name = obj.split("-")
+                button = Gtk.Button(label=obj_name)
+                button.connect("clicked", self.onClickObject, obj_id, obj_name)
+                button.show()
+                button.set_focus_on_click(True)
+                button_container.attach(button, row, col, 1, 1)
+
+            # reveal the calibration widgets
             revealer.set_reveal_child(True)
             # also reveal the info box (if it's not already)
             info_revealer = self.glade.get_object("info_revealer")
             if not info_revealer.get_reveal_child():
                 self.onInfoDialog(None)
-
+        
 
     def onInfoDialog(self, widget, data=None):
         """
