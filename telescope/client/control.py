@@ -1,5 +1,5 @@
  # -*- coding: utf-8 -*-
-# Copyright: Armin Leuprecht <mir@mur.at> and Stephan Burger <stephan101@gmail.com>
+# Copyright: Armin Leuprecht <mir@mur.at> and Stephan Burger <stephan101@gmx.de>
 # License: GNU GPL version 3; http://www.gnu.org/licenses/gpl.txt
 
 """
@@ -14,7 +14,7 @@ from math import sqrt, ceil
 try:
     from gi.repository import Gtk
     from gi.repository import Gdk
-    from gi.repository import GLib
+    from gi.repository import GObject
 except:
     sys.exit(1)
 

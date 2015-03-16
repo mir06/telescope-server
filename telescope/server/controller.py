@@ -1,5 +1,5 @@
 # -*- encoding: utf-8 -*-
-# Copyright: Armin Leuprecht <mir@mur.at> and Stephan Burger <stephan101@gmail.com>
+# Copyright: Armin Leuprecht <mir@mur.at> and Stephan Burger <stephan101@gmx.de>
 # License: GNU GPL version 3; http://www.gnu.org/licenses/gpl.txt
 
 from basecontroller import BaseController
@@ -344,6 +344,7 @@ class Controller(BaseController):
 
         if action:
             # remember tracking state and start motor
+            logging.debug("Action") 
             self.restart[motor_id] = self._is_tracking
             self.running[motor_id] = True
             self._stop_tracking()
@@ -398,6 +399,7 @@ class Controller(BaseController):
         implementation of toggle_tracking
         """
         if self.calibrated:
+            logging.debug("calibrated")
             toggle = self._is_tracking
             if toggle:
                 self._stop_tracking()
