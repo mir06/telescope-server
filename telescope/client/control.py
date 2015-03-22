@@ -264,7 +264,8 @@ class GtkClient(object):
             try:
                 # check and set the tracking status
                 tracking = self.connection.get_tracking_status()
-                GLib.idle_add(self.tracking_switch.set_active, tracking)
+                if tracking != self.tracking_switch.get_active():
+                    GLib.idle_add(self.tracking_switch.set_active, tracking)
                 if info_revealer.get_reveal_child():
                     try:
                         location = self._location
