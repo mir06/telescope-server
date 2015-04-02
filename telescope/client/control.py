@@ -193,7 +193,16 @@ class GtkClient(object):
         self.location_store = self.glade.get_object("liststore_location")
         self.location_tree = self.glade.get_object("treeview_location")
 
-        self.tracking_switch = self.glade.get_object("tracking_switch")
+        # set tracking gui
+        self.track_button = self.glade.get_object("track_button")
+        self.track_spinner = self.glade.get_object("track_spinner")
+        self.track_start = self.glade.get_object("track_start")
+        self.track_pause = self.glade.get_object("track_pause")
+
+        self.track_button.set_image(self.track_start)
+        self.tracking = False
+        
+
         self.steps_per_click = self.glade.get_object("steps_per_click")
         
         # connect signals with userdata
@@ -230,7 +239,7 @@ class GtkClient(object):
             'right': Gdk.KEY_Right, 'left': Gdk.KEY_Left,
             'up': Gdk.KEY_Up, 'down': Gdk.KEY_Down }
         self.key_direction = {value:key for key, value in self.direction_key.iteritems()}
-        
+
         # start thread that query the server status
         self.query_thread = Thread(target=self.check_server)
         self.query_thread.daemon = True
@@ -264,8 +273,18 @@ class GtkClient(object):
             try:
                 # check and set the tracking status
                 tracking = self.connection.get_tracking_status()
-                self.tracking_switch.set_state(tracking)
-                # GLib.idle_add(self.onToggleTracking, self.tracking_switch, None)
+                if self.tracking != tracking:
+                    if tracking:
+                        GLib.idle_add(self.track_spinner.start)
+                        GLib.idle_add(self.track_button.set_image,
+                                      self.track_pause)
+                        self.tracking = True
+                    else:
+                        GLib.idle_add(self.track_spinner.stop)
+                        GLib.idle_add(self.track_button.set_image,
+                                      self.track_start)
+                        self.tracking = False
+                    
                 if info_revealer.get_reveal_child():
                     try:
                         location = self._location
@@ -643,13 +662,11 @@ class GtkClient(object):
         else:
             info_revealer.set_reveal_child(True)
 
-    def onToggleTracking(self, switch, gparam):
+    def onToggleTracking(self, button):
         """
         toggle tracking
         """
-        tracking = self.connection.get_tracking_status()
-        if switch.get_active() != tracking:
-            self.connection.toggle_tracking()
+        self.connection.toggle_tracking()
 
 
     def _translate_direction(self, direction):
