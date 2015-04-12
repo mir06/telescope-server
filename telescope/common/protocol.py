@@ -18,6 +18,7 @@ class command:
     APPLY_OBJECT = 8
     RAS_SHUTDOWN = 9
     RAS_RESTART  = 10
+    TEL_RESTART  = 11
     STATUS       = 99
 
 class status:

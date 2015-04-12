@@ -186,6 +186,14 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
                         logging.error("cannot restart rasberry")
                     break
 
+                elif mtype == command.TEL_RESTART:
+                    # Reboot Rasberry
+                    try:
+                        subprocess.call(['/etc/init.d/telescoped restart'], shell=True)
+                    except:
+                        logging.error("cannot restart telescope-server")
+                    break
+
                 elif mtype == command.STATUS:
                     # get the status of the controller by status_code (small integer)
                     status_code = self._unpack_data(data, 'intle:16')

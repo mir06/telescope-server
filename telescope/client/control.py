@@ -168,6 +168,11 @@ class Connector(object):
         data += ConstBitStream('intle:16=%d' % command.RAS_RESTART)
         tmp = self._make_connection(data)
 
+    def telescope_restart(self):
+        data = ConstBitStream('0x1400')
+        data += ConstBitStream('intle:16=%d' % command.TEL_RESTART)
+        tmp = self._make_connection(data)
+
 class GtkClient(object):
     """
     The GUI to the Telescope-client
@@ -790,3 +795,11 @@ class GtkClient(object):
         rasberry_restart
         """
         self.connection.rasberry_restart()
+
+    def on_telescope_restart_clicked(self, button):
+        """
+        telescope_restart
+        """
+        self.connection.telescope_restart()
+
+
