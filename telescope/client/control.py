@@ -158,6 +158,16 @@ class Connector(object):
         data += ConstBitStream('intle:16=%d' % command.TOGGLE_TRACK)
         tmp = self._make_connection(data)
 
+    def rasberry_shutdown(self):
+        data = ConstBitStream('0x1400')
+        data += ConstBitStream('intle:16=%d' % command.RAS_SHUTDOWN)
+        tmp = self._make_connection(data)
+
+    def rasberry_restart(self):
+        data = ConstBitStream('0x1400')
+        data += ConstBitStream('intle:16=%d' % command.RAS_RESTART)
+        tmp = self._make_connection(data)
+
 class GtkClient(object):
     """
     The GUI to the Telescope-client
@@ -768,3 +778,15 @@ class GtkClient(object):
                 index = direction in ["right", "left"]
                 self._start_stop_motor(direction)
         return True
+
+    def on_rasberry_shutdown_clicked(self, button):
+        """
+        trasberry_shutdown
+        """
+        self.connection.rasberry_shutdown()
+
+    def on_rasberry_restart_clicked(self, button):
+        """
+        rasberry_restart
+        """
+        self.connection.rasberry_restart()

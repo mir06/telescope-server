@@ -16,6 +16,8 @@ class command:
     SET_ANGLE    = 6
     TOGGLE_TRACK = 7
     APPLY_OBJECT = 8
+    RAS_SHUTDOWN = 9
+    RAS_RESTART  = 10
     STATUS       = 99
 
 class status:
