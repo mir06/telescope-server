@@ -16,6 +16,7 @@ from string import replace
 from time import time, sleep
 from bitstring import ConstBitStream
 import threading
+import subprocess
 
 from telescope.common.protocol import command, status
 
@@ -167,6 +168,22 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
                         self.server.controller.apply_object()
                     except:
                         logging.error("cannot apply controller to given object")
+                    break
+
+                elif mtype == command.RAS_SHUTDOWN:
+                    # Shutdown Rasberry
+                    try:
+                        subprocess.call(['halt'], shell=True)
+                    except:
+                        logging.error("cannot shutdown rasberry")
+                    break
+
+                elif mtype == command.RAS_RESTART:
+                    # Reboot Rasberry
+                    try:
+                        subprocess.call(['shutdown -r now'], shell=True)
+                    except:
+                        logging.error("cannot restart rasberry")
                     break
 
                 elif mtype == command.STATUS:
