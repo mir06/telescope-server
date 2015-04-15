@@ -200,6 +200,7 @@ class GtkClient(object):
         settings.props.gtk_button_images = True
 
         self.navigation = self.glade.get_object("navigation")
+        self.resets = self.glade.get_object("resets")
         self.conn_button = self.glade.get_object("connection")
         self.loc_button = self.glade.get_object("location")
         self.cal_button = self.glade.get_object("calibration")
@@ -341,7 +342,8 @@ class GtkClient(object):
                         curr_steps = "na/na"
 
                     GLib.idle_add(self.glade.get_object("info_location").set_text, location)
-                    GLib.idle_add(self.glade.get_object("info_radec").set_text, radec)
+                    GLib.idle_add(self.glade.get_object("info_ip_port").set_text, self.connection.hostname)
+                    GLib.idle_add(self.glade.get_object("info_connected").set_text, "YES")
                     GLib.idle_add(self.glade.get_object("info_azalt").set_text, azalt)
                     GLib.idle_add(self.glade.get_object("info_calibrated").set_text, calibrated)
                     GLib.idle_add(self.glade.get_object("info_sighted_objects").set_text, nr)
@@ -353,6 +355,7 @@ class GtkClient(object):
                 sleep(1)
 
             except:
+                GLib.idle_add(self.glade.get_object("info_connected").set_text, "NO")
                 sleep(5)
 
     def write_preferences(self):
@@ -461,8 +464,10 @@ class GtkClient(object):
             calibrated = self.connection.get_calibration_status()
             if calibrated:
                 self.navigation.set_sensitive(True)
+                self.resets.set_sensitive(True)
             else:
                 self.navigation.set_sensitive(False)
+                self.resets.set_sensitive(False)
 
             # set connected button image to connected
             icon = "gtk-connect"
@@ -474,6 +479,7 @@ class GtkClient(object):
             self.cal_button.set_sensitive(False)
             self.info_button.set_sensitive(False)
             self.navigation.set_sensitive(False)
+            self.resets.set_sensitive(False)
 
         self.conn_button.set_stock_id(icon)
 
