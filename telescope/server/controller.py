@@ -78,7 +78,7 @@ class Controller(BaseController):
     @property
     def target(self):
         try:
-            return "%s / %s" % (self._target.ra, self._target.dec)
+            return "%s / %s" % (self._target._ra, self._target._dec)
         except:
             return "no target selected"
 

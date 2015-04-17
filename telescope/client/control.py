@@ -332,7 +332,7 @@ class GtkClient(object):
                         nr = "na"
 
                     try:
-                        spr = self._spr
+                        spr = self.connection.get_spr()
                     except:
                         spr = "na/na"
 
@@ -342,8 +342,9 @@ class GtkClient(object):
                         curr_steps = "na/na"
 
                     GLib.idle_add(self.glade.get_object("info_location").set_text, location)
-                    GLib.idle_add(self.glade.get_object("info_ip_port").set_text, self.connection.hostname)
+                    GLib.idle_add(self.glade.get_object("info_ip_port").set_text, self.connection.hostname+" : "+"%s" % self.connection.port)
                     GLib.idle_add(self.glade.get_object("info_connected").set_text, "YES")
+                    GLib.idle_add(self.glade.get_object("info_radec").set_text, radec)
                     GLib.idle_add(self.glade.get_object("info_azalt").set_text, azalt)
                     GLib.idle_add(self.glade.get_object("info_calibrated").set_text, calibrated)
                     GLib.idle_add(self.glade.get_object("info_sighted_objects").set_text, nr)
