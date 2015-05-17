@@ -10,7 +10,9 @@
       <column type="gfloat"/>
       <!-- column-name Latitude -->
       <column type="gfloat"/>
-      <!-- column-name Altitude -->
+      <!-- column-name asdf -->
+      <column type="gfloat"/>
+      <!-- column-name Long -->
       <column type="gfloat"/>
     </columns>
   </object>

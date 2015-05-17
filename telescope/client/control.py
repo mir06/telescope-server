@@ -343,6 +343,7 @@ class GtkClient(object):
 
                     GLib.idle_add(self.glade.get_object("info_location").set_text, location)
                     GLib.idle_add(self.glade.get_object("info_ip_port").set_text, self.connection.hostname+" : "+"%s" % self.connection.port)
+                    GLib.idle_add(self.glade.get_object("info_connected").modify_fg, Gtk.StateType.NORMAL, Gdk.Color(0,32535,0))
                     GLib.idle_add(self.glade.get_object("info_connected").set_text, "YES")
                     GLib.idle_add(self.glade.get_object("info_radec").set_text, radec)
                     GLib.idle_add(self.glade.get_object("info_azalt").set_text, azalt)
@@ -356,6 +357,7 @@ class GtkClient(object):
                 sleep(1)
 
             except:
+                GLib.idle_add(self.glade.get_object("info_connected").modify_fg, Gtk.StateType.NORMAL, Gdk.Color(65535,0,0))
                 GLib.idle_add(self.glade.get_object("info_connected").set_text, "NO")
                 sleep(5)
 
@@ -777,7 +779,9 @@ class GtkClient(object):
             if event.keyval in self.direction_key.values():
                 direction = self.key_direction[event.keyval]
                 self._start_stop_motor(direction, cont=True)
-        return True
+                return True
+            else:
+                return False
 
     def onCursorReleased(self, widget, event, data=None):
         """
@@ -789,7 +793,9 @@ class GtkClient(object):
                 direction = self.key_direction[event.keyval]
                 index = direction in ["right", "left"]
                 self._start_stop_motor(direction)
-        return True
+                return True
+            else:
+                return False
 
     def on_rasberry_shutdown_clicked(self, button):
         """
