@@ -220,6 +220,7 @@ class GtkClient(object):
         
 
         self.steps_per_click = self.glade.get_object("steps_per_click")
+
         
         # connect signals with userdata
         for ind, col in enumerate(self.location_tree.get_columns()):
@@ -340,6 +341,15 @@ class GtkClient(object):
                         curr_steps = self.connection.get_curr_steps()
                     except:
                         curr_steps = "na/na"
+                    try:                    
+                        altspr,azimspr = spr.split("/")
+                        altrad = self.glade.get_object("steps_per_click").get_value()/int(altspr)*360
+                        azimrad = self.glade.get_object("steps_per_click").get_value()/int(azimspr)*360
+                        altdeg,altmin,altsec=self._decdeg2dms(altrad)
+                        azimdeg,azimmin,azimsec=self._decdeg2dms(azimrad)
+                        degree_per_click = str(altdeg).zfill(2)+"°"+str(altmin).zfill(2)+"'"+str(altsec)+"''"+" / "+str(azimdeg).zfill(2)+"°"+str(azimmin).zfill(2)+"'"+str(azimsec)+"''"
+                    except:
+                        degree_per_click = "na/na"
 
                     GLib.idle_add(self.glade.get_object("info_location").set_text, location)
                     GLib.idle_add(self.glade.get_object("info_ip_port").set_text, self.connection.hostname+" : "+"%s" % self.connection.port)
@@ -351,6 +361,8 @@ class GtkClient(object):
                     GLib.idle_add(self.glade.get_object("info_sighted_objects").set_text, nr)
                     GLib.idle_add(self.glade.get_object("info_spr").set_text, spr)
                     GLib.idle_add(self.glade.get_object("info_curr_steps").set_text, curr_steps)
+                    GLib.idle_add(self.glade.get_object("info_degree_per_click").set_text, degree_per_click)
+
                                 
                 # end of information revealer update
 
@@ -814,5 +826,13 @@ class GtkClient(object):
         telescope_restart
         """
         self.connection.telescope_restart()
+
+    def _decdeg2dms(self,dd):
+        is_positive = dd >= 0
+        dd = abs(dd)
+        minutes,seconds = divmod(dd*3600,60)
+        degrees,minutes = divmod(minutes,60)
+	degrees = degrees if is_positive else -degrees
+	return (int(degrees),int(minutes),round(seconds,3))
 
 
