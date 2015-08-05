@@ -10,7 +10,9 @@
       <column type="gfloat"/>
       <!-- column-name Latitude -->
       <column type="gfloat"/>
-      <!-- column-name Altitude -->
+      <!-- column-name asdf -->
+      <column type="gfloat"/>
+      <!-- column-name Long -->
       <column type="gfloat"/>
     </columns>
   </object>
@@ -24,6 +26,47 @@
         <property name="can_focus">False</property>
         <property name="orientation">vertical</property>
         <property name="spacing">2</property>
+        <child internal-child="action_area">
+          <object class="GtkButtonBox" id="dialog-action_area2">
+            <property name="can_focus">False</property>
+            <property name="homogeneous">True</property>
+            <property name="layout_style">end</property>
+            <child>
+              <object class="GtkButton" id="location_set">
+                <property name="label">gtk-apply</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="use_stock">True</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="location_cancel">
+                <property name="label">gtk-cancel</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="use_stock">True</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="pack_type">end</property>
+            <property name="position">2</property>
+          </packing>
+        </child>
         <child>
           <object class="GtkFrame" id="location_frame">
             <property name="visible">True</property>
@@ -229,47 +272,6 @@
             <property name="position">1</property>
           </packing>
         </child>
-        <child internal-child="action_area">
-          <object class="GtkButtonBox" id="dialog-action_area2">
-            <property name="can_focus">False</property>
-            <property name="homogeneous">True</property>
-            <property name="layout_style">end</property>
-            <child>
-              <object class="GtkButton" id="location_set">
-                <property name="label">gtk-apply</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <property name="use_stock">True</property>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">0</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkButton" id="location_cancel">
-                <property name="label">gtk-cancel</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <property name="use_stock">True</property>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">1</property>
-              </packing>
-            </child>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">True</property>
-            <property name="pack_type">end</property>
-            <property name="position">2</property>
-          </packing>
-        </child>
       </object>
     </child>
     <action-widgets>
@@ -460,10 +462,10 @@
   </object>
   <object class="GtkAdjustment" id="spc_range">
     <property name="lower">1</property>
-    <property name="upper">1000</property>
+    <property name="upper">10000</property>
     <property name="value">1</property>
-    <property name="step_increment">10</property>
-    <property name="page_increment">100</property>
+    <property name="step_increment">1</property>
+    <property name="page_increment">10</property>
   </object>
   <object class="GtkWindow" id="main_window">
     <property name="can_focus">False</property>
@@ -779,18 +781,46 @@
                           <object class="GtkAlignment" id="alignment9">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
+                            <property name="margin_right">14</property>
                             <property name="left_padding">12</property>
                             <child>
-                              <object class="GtkScale" id="steps_per_click">
+                              <object class="GtkBox" id="box5">
                                 <property name="visible">True</property>
-                                <property name="can_focus">True</property>
-                                <property name="adjustment">spc_range</property>
-                                <property name="restrict_to_fill_level">False</property>
-                                <property name="fill_level">1</property>
-                                <property name="round_digits">0</property>
-                                <property name="digits">0</property>
-                                <property name="has_origin">False</property>
-                                <property name="value_pos">right</property>
+                                <property name="can_focus">False</property>
+                                <property name="orientation">vertical</property>
+                                <child>
+                                  <object class="GtkScale" id="steps_per_click">
+                                    <property name="visible">True</property>
+                                    <property name="can_focus">True</property>
+                                    <property name="adjustment">spc_range</property>
+                                    <property name="restrict_to_fill_level">False</property>
+                                    <property name="fill_level">1</property>
+                                    <property name="round_digits">0</property>
+                                    <property name="digits">0</property>
+                                    <property name="has_origin">False</property>
+                                    <property name="value_pos">right</property>
+                                  </object>
+                                  <packing>
+                                    <property name="expand">False</property>
+                                    <property name="fill">True</property>
+                                    <property name="position">0</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkSpinButton" id="spinbutton1">
+                                    <property name="visible">True</property>
+                                    <property name="can_focus">True</property>
+                                    <property name="margin_top">4</property>
+                                    <property name="margin_bottom">4</property>
+                                    <property name="overwrite_mode">True</property>
+                                    <property name="adjustment">spc_range</property>
+                                  </object>
+                                  <packing>
+                                    <property name="expand">False</property>
+                                    <property name="fill">True</property>
+                                    <property name="position">1</property>
+                                  </packing>
+                                </child>
                               </object>
                             </child>
                           </object>
@@ -815,6 +845,7 @@
                       <object class="GtkBox" id="resets">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
+                        <property name="spacing">12</property>
                         <property name="homogeneous">True</property>
                         <child>
                           <object class="GtkButton" id="rasberry_shutdow">
@@ -1492,34 +1523,32 @@ Restart</property>
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkFrame" id="frame8">
+                          <object class="GtkFrame" id="frame5">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="label_xalign">0</property>
                             <property name="shadow_type">in</property>
                             <child>
-                              <object class="GtkAlignment" id="alignment13">
+                              <object class="GtkAlignment" id="alignment3">
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
-                                <property name="bottom_padding">6</property>
                                 <property name="left_padding">12</property>
                                 <property name="right_padding">12</property>
                                 <child>
-                                  <object class="GtkBox" id="box29">
+                                  <object class="GtkGrid" id="grid2">
                                     <property name="visible">True</property>
                                     <property name="can_focus">False</property>
-                                    <property name="spacing">12</property>
+                                    <property name="column_spacing">12</property>
                                     <child>
                                       <object class="GtkLabel" id="label24">
                                         <property name="visible">True</property>
                                         <property name="can_focus">False</property>
                                         <property name="xalign">0</property>
-                                        <property name="label" translatable="yes">azimuthal / altitudinal</property>
+                                        <property name="label" translatable="yes">steps per 360°</property>
                                       </object>
                                       <packing>
-                                        <property name="expand">False</property>
-                                        <property name="fill">True</property>
-                                        <property name="position">0</property>
+                                        <property name="left_attach">0</property>
+                                        <property name="top_attach">0</property>
                                       </packing>
                                     </child>
                                     <child>
@@ -1530,60 +1559,20 @@ Restart</property>
                                         <property name="justify">right</property>
                                       </object>
                                       <packing>
-                                        <property name="expand">False</property>
-                                        <property name="fill">True</property>
-                                        <property name="pack_type">end</property>
-                                        <property name="position">1</property>
+                                        <property name="left_attach">1</property>
+                                        <property name="top_attach">0</property>
                                       </packing>
                                     </child>
-                                  </object>
-                                </child>
-                              </object>
-                            </child>
-                            <child type="label">
-                              <object class="GtkLabel" id="label25">
-                                <property name="visible">True</property>
-                                <property name="can_focus">False</property>
-                                <property name="label" translatable="yes">&lt;b&gt;Motor steps per revolution&lt;/b&gt;</property>
-                                <property name="use_markup">True</property>
-                              </object>
-                            </child>
-                          </object>
-                          <packing>
-                            <property name="expand">False</property>
-                            <property name="fill">True</property>
-                            <property name="position">4</property>
-                          </packing>
-                        </child>
-                        <child>
-                          <object class="GtkFrame" id="Motor1">
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="label_xalign">0</property>
-                            <property name="shadow_type">in</property>
-                            <child>
-                              <object class="GtkAlignment" id="alignment14">
-                                <property name="visible">True</property>
-                                <property name="can_focus">False</property>
-                                <property name="bottom_padding">6</property>
-                                <property name="left_padding">12</property>
-                                <property name="right_padding">12</property>
-                                <child>
-                                  <object class="GtkBox" id="box30">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">False</property>
-                                    <property name="spacing">12</property>
                                     <child>
                                       <object class="GtkLabel" id="label26">
                                         <property name="visible">True</property>
                                         <property name="can_focus">False</property>
                                         <property name="xalign">0</property>
-                                        <property name="label" translatable="yes">azimuthal / altitudinal</property>
+                                        <property name="label" translatable="yes">steps absolute</property>
                                       </object>
                                       <packing>
-                                        <property name="expand">False</property>
-                                        <property name="fill">True</property>
-                                        <property name="position">0</property>
+                                        <property name="left_attach">0</property>
+                                        <property name="top_attach">1</property>
                                       </packing>
                                     </child>
                                     <child>
@@ -1594,10 +1583,31 @@ Restart</property>
                                         <property name="justify">right</property>
                                       </object>
                                       <packing>
-                                        <property name="expand">False</property>
-                                        <property name="fill">True</property>
-                                        <property name="pack_type">end</property>
-                                        <property name="position">1</property>
+                                        <property name="left_attach">1</property>
+                                        <property name="top_attach">1</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <object class="GtkLabel" id="label8">
+                                        <property name="visible">True</property>
+                                        <property name="can_focus">False</property>
+                                        <property name="xalign">0</property>
+                                        <property name="label" translatable="yes">degree per click</property>
+                                      </object>
+                                      <packing>
+                                        <property name="left_attach">0</property>
+                                        <property name="top_attach">2</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <object class="GtkLabel" id="info_degree_per_click">
+                                        <property name="visible">True</property>
+                                        <property name="can_focus">False</property>
+                                        <property name="justify">right</property>
+                                      </object>
+                                      <packing>
+                                        <property name="left_attach">1</property>
+                                        <property name="top_attach">2</property>
                                       </packing>
                                     </child>
                                   </object>
@@ -1605,10 +1615,10 @@ Restart</property>
                               </object>
                             </child>
                             <child type="label">
-                              <object class="GtkLabel" id="label27">
+                              <object class="GtkLabel" id="label7">
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
-                                <property name="label" translatable="yes">&lt;b&gt;Motor steps absolut&lt;/b&gt;</property>
+                                <property name="label" translatable="yes">&lt;b&gt;Motor azimuthal/altitudinal&lt;/b&gt;</property>
                                 <property name="use_markup">True</property>
                               </object>
                             </child>
@@ -1616,7 +1626,7 @@ Restart</property>
                           <packing>
                             <property name="expand">False</property>
                             <property name="fill">True</property>
-                            <property name="position">5</property>
+                            <property name="position">6</property>
                           </packing>
                         </child>
                       </object>
