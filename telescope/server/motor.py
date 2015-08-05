@@ -11,7 +11,7 @@ from gpio import GPIO
 class Motor(object):
 
     def __init__(self, name, pins, min_angle=-5, max_angle=365,
-                 positive=1, vend=10000, vstart=20, skewness=.75, accel_steps=4000):
+                 positive=1, vend=4500, vstart=20, skewness=.75, accel_steps=4000):
         def _accel_velocity(x):
             """
             calculate the acceleration/deceleration velocity in the interval [0,1]
