@@ -90,7 +90,10 @@ class TelescopeRequestHandler(SocketServer.BaseRequestHandler):
             self.request.settimeout(.01)
             try:
                 data0 = self.request.recv(160)
+                logging.debug("Input")
+                logging.debug(data0)
                 data = ConstBitStream(bytes=data0, length=160)
+                logging.debug(data)
                 msize = data.read('intle:16')
                 mtype = data.read('intle:16')
                 logging.debug("mtype: %s ", mtype)
