@@ -368,7 +368,10 @@ class Controller(BaseController):
         try:
             self.choose_object_id=object_id
             obj = self._sky_objects[self.choose_object_id]
-            logging.debug("choose %s", obj.name)
+            self._observer.date = datetime.utcnow()
+            obj.compute(self._observer)
+            self._target._ra, self._target._dec = obj.a_ra, obj.a_dec
+            logging.debug("choose %s %s %s", obj.name,self._target._ra, self._target._dec)
             return True
         except:
             logging.debug("could not set coordinates of object nr. %d", object_id)

@@ -12,7 +12,7 @@ class Motor(object):
 
     def __init__(self, name, pins, min_angle=-5, max_angle=365,
                  positive=1, vend=4500, vstart=20, skewness=.75,
-                 accel_steps=4000):
+                 accel_steps=4000, skewnessbra=.9, bra_steps=500):
         def _accel_velocity(x):
             """
             calculate the acceleration/deceleration velocity in the interval [0,1]
@@ -24,6 +24,12 @@ class Motor(object):
             skew the velocity cosine by a parabolic function
             """
             return pow(x, skewness)/pow(accel_steps, skewness)
+            
+        def _bra_skewing(x):
+            """
+            skew the velocity cosine by a parabolic function
+            """
+            return pow(x, skewnessbra)/pow(bra_steps, skewnessbra)
 
         self.name = name
         self.PUL, self.DIR, self.ENBL = pins
@@ -43,6 +49,8 @@ class Motor(object):
 
         self._accel_curve = [ 1./_accel_velocity(_accel_skewing(x)) \
                               for x in xrange(accel_steps) ]
+        self._bra_curve = [ 1./_accel_velocity(_bra_skewing(x)) \
+                              for x in xrange(bra_steps) ]
 
     def __str__(self):
         return self.name
@@ -110,10 +118,10 @@ class Motor(object):
 
     def brake(self, current_delay, direction):
         self._stop = False
-        accel_index = min(range(len(self._accel_curve)), key=lambda i: abs(self._accel_curve[i]-current_delay))
+        accel_index = min(range(len(self._bra_curve)), key=lambda i: abs(self._bra_curve[i]-current_delay))
         logging.debug("braking down within %d steps", accel_index)
         for step in xrange(accel_index):
-            step_delay = self._accel_curve[accel_index-step]
+            step_delay = self._bra_curve[accel_index-step]
             GPIO.output(self.PUL, True)
             GPIO.output(self.PUL, False)
             self._steps += 2*(direction-.5)*self._positive
