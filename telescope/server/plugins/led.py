@@ -18,7 +18,8 @@ class Led(object):
     def __init__(self, controller):
         self.controller = controller
         self.status_pin = 2
-        self._blink_delay = 5
+        self._blink_delayshort = 5
+        self._blink_delaylongt = 5
         GPIO.setup(self.status_pin, GPIO.OUT)
         thread.start_new_thread(self._blinking, ())
         thread.start_new_thread(self._check_status, ())
@@ -27,18 +28,29 @@ class Led(object):
         # running forever with the current blink rate
         while True:
             GPIO.output(self.status_pin, False)
-            sleep(self._blink_delay)
+            sleep(self._blink_delayshort)
             GPIO.output(self.status_pin, True)        
-            sleep(self._blink_delay)
-
+            sleep(self._blink_delayshort)
+            GPIO.output(self.status_pin, False)
+            sleep(self._blink_delayshort)
+            GPIO.output(self.status_pin, True)        
+            sleep(self._blink_delayshort)
+            GPIO.output(self.status_pin, False)
+            sleep(self._blink_delaylongt)
+            GPIO.output(self.status_pin, True)        
+            sleep(self._blink_delaylongt)
     def _check_status(self):
         # check if some client is connected and if so
         # check if object is tracked and adjust blinking speed
         while True:
-            logging.debug("blink rate: %f", self._blink_delay)
+            logging.debug("blink rate: %f / %f", self._blink_delayshort, self._blink_delaylongt)
             try:
                 if self.controller._is_tracking:
-                     self._blink_delay = .5
+                    self._blink_delayshort = .125
+                    self._blink_delaylongt = .5
+#                elif self.controller.is_motor_on():
+#                    self._blink_delayshort = .125
+#                    self._blink_delaylongt = .125
                 elif not self.controller.client_connected:
                     try:
                         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -47,19 +59,32 @@ class Led(object):
                             0x8915,  # SIOCGIFADDR
                             struct.pack('256s', 'wlan0'[:15])
                             )[20:24])
-                        self._blink_delay = 1
+                        self._blink_delayshort = .5
+                        self._blink_delaylongt = 1
                     except:
-                        self._blink_delay =.125
+                        self._blink_delayshort = 1
+                        self._blink_delaylongt = 2
                 else:
-                    self._blink_delay = 2
+                    self._blink_delayshort = .5
+                    self._blink_delaylongt = .5
             except:
-                self._blink_delay = 5 
+                self._blink_delayshort = 3
+                self._blink_delaylongt = 3 				
             sleep(2)
 
     @property
-    def blink_delay(self):
-        return self._blink_delay
+    def blink_delayshort(self):
+        return self._blink_delayshort
 
-    @blink_delay.setter
-    def blink_delay(self, delay):
-        self._blink_delay = delay
+    @blink_delayshort.setter
+    def blink_delayshort(self, delayshort):
+        self._blink_delayshort = delayshort
+
+    @property
+    def blink_delaylongt(self):
+        return self._blink_delaylongt
+
+    @blink_delaylongt.setter
+    def blink_delaylongt(self, delaylongt):
+        self._blink_delaylongt = delaylongt
+

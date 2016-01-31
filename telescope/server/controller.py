@@ -99,6 +99,16 @@ class Controller(BaseController):
         return self._is_tracking()
 
     @property
+    def is_motor_on(self):
+        try:
+            for t in self._motor_threads:
+                if t.isAlive():
+                    return True
+            return False
+        except:
+            return False
+
+    @property
     def client_connected(self):
         return self._client_connected
 
