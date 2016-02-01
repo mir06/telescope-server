@@ -42,23 +42,20 @@ class Led(object):
     def _check_status(self):
         # check if some client is connected and if so
         # check if object is tracked and adjust blinking speed
+        logging.debug("blink rate: %f / %f", self._blink_delayshort, self._blink_delaylongt)
         while True:
             logging.debug("blink rate: %f / %f", self._blink_delayshort, self._blink_delaylongt)
             try:
-                logging.debug("hallo")
                 try:
-                    logging.debug("hallo2")
-                    logging.debug("tracking ", self.controller._is_tracking)
-                    logging.debug("hallo32")
-                    logging.debug("motor on %s", self.controller.is_motor_on())
-                    logging.debug("hallo42")
+                    logging.debug("tracking: %s ", self.controller._is_tracking)
+                    logging.debug("motor on: %s", self.controller.is_motor_on)
                     logging.debug("client connected %s", self.controller.client_connected)
                 except Exception as e:
-                    logging.debug(e)
+                    logging.debug("Exeption: %s", e)
                 if self.controller._is_tracking:
                     self._blink_delayshort = .125
                     self._blink_delaylongt = .5
-                elif self.controller.is_motor_on():
+                elif self.controller.is_motor_on:
                     self._blink_delayshort = .125
                     self._blink_delaylongt = .125
                 elif not self.controller.client_connected:
@@ -69,17 +66,18 @@ class Led(object):
                             0x8915,  # SIOCGIFADDR
                             struct.pack('256s', 'wlan0'[:15])
                             )[20:24])
-                        self._blink_delayshort = .5
+                        self._blink_delayshort = 1
                         self._blink_delaylongt = 1
                     except:
-                        self._blink_delayshort = 1
+                        self._blink_delayshort = 1.5
                         self._blink_delaylongt = 3
                 else:
                     self._blink_delayshort = .5
                     self._blink_delaylongt = .5
             except:
                 self._blink_delayshort = 3
-                self._blink_delaylongt = 3 				
+                self._blink_delaylongt = 3
+            logging.debug("blink rate: %f / %f", self._blink_delayshort, self._blink_delaylongt)
             sleep(2)
 
     @property
