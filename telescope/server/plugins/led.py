@@ -45,12 +45,22 @@ class Led(object):
         while True:
             logging.debug("blink rate: %f / %f", self._blink_delayshort, self._blink_delaylongt)
             try:
+                logging.debug("hallo")
+                try:
+                    logging.debug("hallo2")
+                    logging.debug("tracking ", self.controller._is_tracking)
+                    logging.debug("hallo32")
+                    logging.debug("motor on %s", self.controller.is_motor_on())
+                    logging.debug("hallo42")
+                    logging.debug("client connected %s", self.controller.client_connected)
+                except Exception as e:
+                    logging.debug(e)
                 if self.controller._is_tracking:
                     self._blink_delayshort = .125
                     self._blink_delaylongt = .5
-#                elif self.controller.is_motor_on():
-#                    self._blink_delayshort = .125
-#                    self._blink_delaylongt = .125
+                elif self.controller.is_motor_on():
+                    self._blink_delayshort = .125
+                    self._blink_delaylongt = .125
                 elif not self.controller.client_connected:
                     try:
                         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -63,7 +73,7 @@ class Led(object):
                         self._blink_delaylongt = 1
                     except:
                         self._blink_delayshort = 1
-                        self._blink_delaylongt = 2
+                        self._blink_delaylongt = 3
                 else:
                     self._blink_delayshort = .5
                     self._blink_delaylongt = .5

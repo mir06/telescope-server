@@ -102,10 +102,14 @@ class Controller(BaseController):
     def is_motor_on(self):
         try:
             for t in self._motor_threads:
-                if t.isAlive():
+                logging.debug("on motor thread %s", t)
+                if ((t is not None) and t.isAlive()):
+                    logging.debug("isaliver %s", t)
                     return True
+            logging.debug("isnotaliver %s", t)
             return False
         except:
+            logging.debug("isnotaliverexeption")
             return False
 
     @property
