@@ -2,10 +2,12 @@
 # Copyright: Armin Leuprecht <mir@mur.at> and Stephan Burger <stephan101@gmx.de>
 # License: GNU GPL version 3; http://www.gnu.org/licenses/gpl.txt
 
+
 class BaseController(object):
     """
     base controller class that implements all necessary functions
     """
+
     def __init__(self):
         self._ra = 0
         self._dec = 0

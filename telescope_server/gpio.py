@@ -5,9 +5,12 @@
 # if not running on raspberry just ignore
 # the actual control of the motors
 try:
+    # Third party
     import RPi.GPIO as GPIO
-except:
+except ImportError:
+    # Standard Library
     from time import sleep
+
     class gpio:
         BCM = 0
         OUT = 0
@@ -17,19 +20,25 @@ except:
         PUD_UP = 0
         RISING = 0
         FALLING = 0
-        
+
         def setmode(self, mode):
             pass
+
         def setwarnings(self, bool):
             pass
+
         def setup(self, pin, in_out, pull_up_down=PUD_DOWN):
             pass
+
         def input(self, pin):
             return True
+
         def output(self, pin, bool):
             pass
+
         def add_event_detect(self, pin, edge, callback=None, bouncetime=None):
             pass
+
         def wait_for_edge(self, pin, edge):
             # just sleep forever
             while True:

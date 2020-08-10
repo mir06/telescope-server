@@ -5,20 +5,23 @@
 """
 plugin to toggle tracking
 """
-import thread
+# Standard Library
+import _thread
+import logging
+
 from time import sleep
 
-from telescope.server.gpio import GPIO
+# First party
+from telescope_server.gpio import GPIO
 
-import logging
 
 class Track(object):
     def __init__(self, controller):
-	self.controller = controller
+        self.controller = controller
         self._track_pin = 17
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(self._track_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-        thread.start_new_thread(self._toggle_track, ())
+        _thread.start_new_thread(self._toggle_track, ())
 
     def _toggle_track(self):
         """
@@ -26,6 +29,6 @@ class Track(object):
         """
         while True:
             GPIO.wait_for_edge(self._track_pin, GPIO.FALLING)
-            logging.debug("tracking edge") 
+            logging.debug("tracking edge")
             self.controller.toggle_tracking()
-            sleep(.5)
+            sleep(0.5)
