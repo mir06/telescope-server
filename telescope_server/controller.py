@@ -2,22 +2,28 @@
 # Copyright: Armin Leuprecht <mir@mur.at> and Stephan Burger <stephan101@gmx.de>
 # License: GNU GPL version 3; http://www.gnu.org/licenses/gpl.txt
 
-from basecontroller import BaseController
-from motor import Motor
+# Standard Library
+import logging
 
+from datetime import datetime
+from itertools import combinations
+from sys import maxsize
+from threading import Thread, Timer
+from time import sleep
+
+# Third party
 import ephem
 import ephem.stars
 
 from numpy import median
 
-from threading import Thread, Timer
-from datetime import datetime
-from time import sleep
-from itertools import combinations
-from sys import maxint
-import logging
+# First party
+from telescope_server.protocol import status
 
-from telescope.common.protocol import status
+# Local imports
+from .basecontroller import BaseController
+from .motor import Motor
+
 
 class Controller(BaseController):
     """
@@ -28,15 +34,15 @@ class Controller(BaseController):
     and controlled via GPIO on a raspberry pi (Motor class)
     """
 
-    az_pins = [15,14,8]
-    alt_pins = [23,18,7]
-    
+    az_pins = [15, 14, 8]
+    alt_pins = [23, 18, 7]
+
     def __init__(self):
 
         # initialize the motors
         self.motors = [
             Motor("Azimuth", self.az_pins, positive=1),
-            Motor("Altitude", self.alt_pins, positive=-1)
+            Motor("Altitude", self.alt_pins, positive=-1),
         ]
 
         # initialize observer and target
@@ -45,10 +51,16 @@ class Controller(BaseController):
 
         # insteresting objects in our solar system and main stars
         self._sky_objects = [
-            ephem.Sun(), ephem.Moon(), ephem.Mercury(), ephem.Venus(), ephem.Mars(),
-            ephem.Jupiter(), ephem.Saturn() ]
-        for star in sorted([ x.split(',')[0] for x in ephem.stars.db.split('\n') if x ]):
-            self._sky_objects.append( ephem.star(star))
+            ephem.Sun(),
+            ephem.Moon(),
+            ephem.Mercury(),
+            ephem.Venus(),
+            ephem.Mars(),
+            ephem.Jupiter(),
+            ephem.Saturn(),
+        ]
+        for star in sorted([x.split(",")[0] for x in ephem.stars.db.split("\n") if x]):
+            self._sky_objects.append(ephem.star(star))
 
         # set boolean variable indicating tracking
         self._is_tracking = False
@@ -59,27 +71,30 @@ class Controller(BaseController):
         self._angles_steps = [[], []]
 
         # initialize motor threads
-        self._motor_threads = [ None, None ]
-        
-        az_default_spr=1293009
-        alt_default_spr=1560660
+        self._motor_threads = [None, None]
+
+        az_default_spr = 1293009
+        alt_default_spr = 1560660
 
         self.motors[0].steps_per_rev = az_default_spr
         self.motors[1].steps_per_rev = alt_default_spr
 
         # at startup no client is connected
         self._client_connected = False
-        
-        
+
     @property
     def location(self):
-        return "%s / %s / %s" % (self._observer.lon, self._observer.lat, self._observer.elev)
+        return "%s / %s / %s" % (
+            self._observer.lon,
+            self._observer.lat,
+            self._observer.elev,
+        )
 
     @property
     def target(self):
         try:
             return "%s / %s" % (self._target._ra, self._target._dec)
-        except:
+        except Exception:
             return "no target selected"
 
     @property
@@ -92,8 +107,8 @@ class Controller(BaseController):
 
     @property
     def calibrated(self):
-        return all([ m.calibrated for m in self.motors ])
-        
+        return all([m.calibrated for m in self.motors])
+
     @property
     def is_tracking(self):
         return self._is_tracking()
@@ -103,12 +118,12 @@ class Controller(BaseController):
         try:
             for t in self._motor_threads:
                 logging.debug("on motor thread %s", t)
-                if ((t is not None) and t.isAlive()):
+                if (t is not None) and t.isAlive():
                     logging.debug("isaliver %s", t)
                     return True
             logging.debug("isnotaliver %s", t)
             return False
-        except:
+        except Exception:
             logging.debug("isnotaliverexeption")
             return False
 
@@ -129,14 +144,15 @@ class Controller(BaseController):
         logging.debug("start %s motor", self.motors[motor_index].name)
         try:
             self._motor_threads[motor_index].join()
-        except:
+        except Exception:
             pass
 
-        self._motor_threads[motor_index] = Thread(target=self.motors[motor_index].step,
-                                                  args=[maxint, direction])
+        self._motor_threads[motor_index] = Thread(
+            target=self.motors[motor_index].step, args=[maxsize, direction]
+        )
         self._motor_threads[motor_index].start()
 
-    def _stop_motors(self, motors=[0,1]):
+    def _stop_motors(self, motors=[0, 1]):
         """
         stop the given motors if they are running
         """
@@ -153,10 +169,10 @@ class Controller(BaseController):
         try:
             for t in self._motor_threads:
                 t.join()
-        except:
+        except Exception:
             pass
-        zipped = zip(self.motors, [az,alt])
-        self._motor_threads = [ Thread(target=x[0].move, args=[x[1]]) for x in zipped ]
+        zipped = list(zip(self.motors, [az, alt]))
+        self._motor_threads = [Thread(target=x[0].move, args=[x[1]]) for x in zipped]
 
         for t in self._motor_threads:
             t.start()
@@ -183,7 +199,7 @@ class Controller(BaseController):
                 self._tracking_thread.join()
                 # be sure that motors are really stopped
                 self._stop_motors()
-            except:
+            except Exception:
                 pass
 
     def _do_tracking(self):
@@ -194,9 +210,11 @@ class Controller(BaseController):
             try:
                 self._observer.date = datetime.utcnow()
                 self._target.compute(self._observer)
-                self._move_to(self._target.az/ephem.degree, self._target.alt/ephem.degree)
-                sleep(.1)
-            except:
+                self._move_to(
+                    self._target.az / ephem.degree, self._target.alt / ephem.degree
+                )
+                sleep(0.1)
+            except Exception:
                 self._is_tracking = False
 
     def _visible_objects(self):
@@ -205,12 +223,12 @@ class Controller(BaseController):
         """
         ret = []
         self._observer.date = datetime.utcnow()
-        for i in xrange(len(self._sky_objects)):
+        for i in range(len(self._sky_objects)):
             obj = self._sky_objects[i]
             obj.compute(self._observer)
             if obj.alt > 0:
                 ret.append("%d-%s" % (i, obj.name))
-        return ','.join(ret)
+        return ",".join(ret)
 
     def _reset_client_connection(self):
         """
@@ -243,10 +261,9 @@ class Controller(BaseController):
         """
         self._observer.date = datetime.utcnow()
         ra, dec = self._observer.radec_of(
-            self.motors[0].angle * ephem.degree,
-            self.motors[1].angle * ephem.degree
-            )
-        ra /= (15.*ephem.degree)
+            self.motors[0].angle * ephem.degree, self.motors[1].angle * ephem.degree
+        )
+        ra /= 15.0 * ephem.degree
         dec /= ephem.degree
         """
         logging.debug("send: %f / %f", ra, dec)
@@ -262,10 +279,12 @@ class Controller(BaseController):
         self._observer.lon = lon * ephem.degree
         self._observer.lat = lat * ephem.degree
         self._observer.elev = alt
-        logging.debug("set location %s / %s / %s",
-                      self._observer.lon,
-                      self._observer.lat,
-                      self._observer.elev)
+        logging.debug(
+            "set location %s / %s / %s",
+            self._observer.lon,
+            self._observer.lat,
+            self._observer.elev,
+        )
 
     def start_calibration(self):
         """
@@ -285,7 +304,6 @@ class Controller(BaseController):
             motor.steps = 0
             motor.steps_per_rev = 1300000
 
-             
     def stop_calibration(self):
         """
         implementation of stop calibration
@@ -296,28 +314,37 @@ class Controller(BaseController):
         if this is successful set the steps_per_rev for the motors
         """
         logging.debug("stop calibration")
-        for i in xrange(2):
+        for i in range(2):
             steps_list = []
-            for comb in combinations(xrange(len(self._angles_steps[i])), 2):
-                steps_diff = self._angles_steps[i][comb[1]][1]-self._angles_steps[i][comb[0]][1]
-                angles_diff = self._angles_steps[i][comb[1]][0]-self._angles_steps[i][comb[0]][0]
-                # check if both have same sign: if not add/subtract one round to the angles
+            for comb in combinations(range(len(self._angles_steps[i])), 2):
+                steps_diff = (
+                    self._angles_steps[i][comb[1]][1]
+                    - self._angles_steps[i][comb[0]][1]
+                )
+                angles_diff = (
+                    self._angles_steps[i][comb[1]][0]
+                    - self._angles_steps[i][comb[0]][0]
+                )
+                # check if both have same sign: if not add/subtract
+                # one round to the angles
                 if steps_diff * angles_diff < 0:
                     angles_diff += (steps_diff > 0) and 360 or -360
 
                 try:
                     steps_per_rev = 360 * steps_diff / angles_diff
                     steps_list.append(steps_per_rev)
-                except:
+                except Exception:
                     pass
 
             try:
                 self.motors[i].steps_per_rev = int(median(steps_list))
-            except:
+            except Exception:
                 pass
-        logging.debug("steps per revolution: %d / %d",
-                     self.motors[0].steps_per_rev,
-                     self.motors[1].steps_per_rev)
+        logging.debug(
+            "steps per revolution: %d / %d",
+            self.motors[0].steps_per_rev,
+            self.motors[1].steps_per_rev,
+        )
 
     def make_step(self, az_steps, alt_steps):
         """
@@ -331,15 +358,13 @@ class Controller(BaseController):
         restart = self._is_tracking
         self._stop_tracking()
         logging.debug("step motors: %d / %d", az_steps, alt_steps)
-        self.motors[0].step(abs(az_steps), az_steps>0)
-        self.motors[1].step(abs(alt_steps), alt_steps>0)
+        self.motors[0].step(abs(az_steps), az_steps > 0)
+        self.motors[1].step(abs(alt_steps), alt_steps > 0)
         if self.calibrated:
             self._observer.date = datetime.utcnow()
-            self._target._ra, self._target._dec = \
-              self._observer.radec_of(
-                    self.motors[0].angle * ephem.degree,
-                    self.motors[1].angle * ephem.degree
-                  )
+            self._target._ra, self._target._dec = self._observer.radec_of(
+                self.motors[0].angle * ephem.degree, self.motors[1].angle * ephem.degree
+            )
             # restart tracking if it was active
             if restart:
                 self._start_tracking()
@@ -358,7 +383,7 @@ class Controller(BaseController):
 
         if action:
             # remember tracking state and start motor
-            logging.debug("Action") 
+            logging.debug("Action")
             self.restart[motor_id] = self._is_tracking
             self.running[motor_id] = True
             self._stop_tracking()
@@ -369,27 +394,27 @@ class Controller(BaseController):
                 if not any(self.running):
                     # no motor is running anymore thus adjust target
                     self._observer.date = datetime.utcnow()
-                    self._target._ra, self._target._dec = \
-                        self._observer.radec_of(
-                            self.motors[0].angle * ephem.degree,
-                            self.motors[1].angle * ephem.degree
-                            )
+                    self._target._ra, self._target._dec = self._observer.radec_of(
+                        self.motors[0].angle * ephem.degree,
+                        self.motors[1].angle * ephem.degree,
+                    )
                     # restart tracking if tracking was active
                     if any(self.restart):
                         self._start_tracking()
 
     def set_object(self, object_id):
         try:
-            self.choose_object_id=object_id
+            self.choose_object_id = object_id
             obj = self._sky_objects[self.choose_object_id]
             self._observer.date = datetime.utcnow()
             obj.compute(self._observer)
             self._target._ra, self._target._dec = obj.a_ra, obj.a_dec
-            logging.debug("choose %s %s %s", obj.name,self._target._ra, self._target._dec)
+            logging.debug(
+                "choose %s %s %s", obj.name, self._target._ra, self._target._dec
+            )
             return True
-        except:
-            logging.debug("could not set coordinates of object nr. %d", object_id)
-
+        except Exception:
+            logging.debug(f"could not set coordinates of object nr. {object_id}")
 
     def apply_object(self):
         """
@@ -406,9 +431,11 @@ class Controller(BaseController):
             obj.compute(self._observer)
             self.motors[0].angle = obj.az / ephem.degree
             self.motors[1].angle = obj.alt / ephem.degree
-            for i in xrange(2):
-                self._angles_steps[i].append((self.motors[i].angle, self.motors[i].steps))
-        except:
+            for i in range(2):
+                self._angles_steps[i].append(
+                    (self.motors[i].angle, self.motors[i].steps)
+                )
+        except Exception:
             logging.error("no object has been choosen")
 
     def toggle_tracking(self):
@@ -444,15 +471,16 @@ class Controller(BaseController):
             # a client is connected
             try:
                 self._conn_timer.cancel()
-            except:
+            except Exception:
                 pass
             self._client_connected = True
             self._conn_timer = Timer(3, self._reset_client_connection)
             self._conn_timer.start()
             return "tracking: %s" % (self._is_tracking and "YES" or "NO")
         elif status_code == status.SPR:
-            return "steps per revolution (az/alt): %d / %d" % \
-                tuple([m.steps_per_rev for m in self.motors])
+            return "steps per revolution (az/alt): %d / %d" % tuple(
+                [m.steps_per_rev for m in self.motors]
+            )
         elif status_code == status.AZ_ANGLES:
             return "angles/steps list for azimuth motor: %s" % self._angles_steps[0]
         elif status_code == status.ALT_ANGLES:
@@ -460,8 +488,10 @@ class Controller(BaseController):
         elif status_code == status.SIGHTED_OBJ:
             return "%d" % len(self._angles_steps[0])
         elif status_code == status.CURR_STEPS:
-            return "current steps (az/alt): %d / %d" % \
-                (self.motors[0].steps, self.motors[1].steps)
+            return "current steps (az/alt): %d / %d" % (
+                self.motors[0].steps,
+                self.motors[1].steps,
+            )
         elif status_code == status.VISIBLE_OBJ:
             return self._visible_objects()
         # elif status_code == status.MOTORRUN:

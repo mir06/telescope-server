@@ -2,7 +2,9 @@
 # Copyright: Armin Leuprecht <mir@mur.at> and Stephan Burger <stephan101@gmx.de>
 # License: GNU GPL version 3; http://www.gnu.org/licenses/gpl.txt
 
-from basecontroller import BaseController
+# Local imports
+from .basecontroller import BaseController
+
 
 class Controller(BaseController):
     pass

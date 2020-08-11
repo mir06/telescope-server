@@ -5,14 +5,18 @@
 """
 plugin to handle a led
 """
-import socket
+# Standard Library
+import _thread
 import fcntl
-import struct
-import thread
-from time import sleep
-from telescope.server.gpio import GPIO
-
 import logging
+import socket
+import struct
+
+from time import sleep
+
+# First party
+from telescope_server.gpio import GPIO
+
 
 class Led(object):
     def __init__(self, controller):
@@ -21,63 +25,75 @@ class Led(object):
         self._blink_delayshort = 5
         self._blink_delaylongt = 5
         GPIO.setup(self.status_pin, GPIO.OUT)
-        thread.start_new_thread(self._blinking, ())
-        thread.start_new_thread(self._check_status, ())
+        _thread.start_new_thread(self._blinking, ())
+        _thread.start_new_thread(self._check_status, ())
 
     def _blinking(self):
         # running forever with the current blink rate
         while True:
             GPIO.output(self.status_pin, False)
             sleep(self._blink_delayshort)
-            GPIO.output(self.status_pin, True)        
+            GPIO.output(self.status_pin, True)
             sleep(self._blink_delayshort)
             GPIO.output(self.status_pin, False)
             sleep(self._blink_delayshort)
-            GPIO.output(self.status_pin, True)        
+            GPIO.output(self.status_pin, True)
             sleep(self._blink_delayshort)
             GPIO.output(self.status_pin, False)
             sleep(self._blink_delaylongt)
-            GPIO.output(self.status_pin, True)        
+            GPIO.output(self.status_pin, True)
             sleep(self._blink_delaylongt)
+
     def _check_status(self):
         # check if some client is connected and if so
         # check if object is tracked and adjust blinking speed
-        logging.debug("blink rate: %f / %f", self._blink_delayshort, self._blink_delaylongt)
+        logging.debug(
+            "blink rate: %f / %f", self._blink_delayshort, self._blink_delaylongt
+        )
         while True:
-            logging.debug("blink rate: %f / %f", self._blink_delayshort, self._blink_delaylongt)
+            logging.debug(
+                "blink rate: %f / %f", self._blink_delayshort, self._blink_delaylongt
+            )
             try:
                 try:
                     logging.debug("tracking: %s ", self.controller._is_tracking)
                     logging.debug("motor on: %s", self.controller.is_motor_on)
-                    logging.debug("client connected %s", self.controller.client_connected)
+                    logging.debug(
+                        "client connected %s", self.controller.client_connected
+                    )
                 except Exception as e:
                     logging.debug("Exeption: %s", e)
                 if self.controller._is_tracking:
-                    self._blink_delayshort = .125
-                    self._blink_delaylongt = .5
+                    self._blink_delayshort = 0.125
+                    self._blink_delaylongt = 0.5
                 elif self.controller.is_motor_on:
-                    self._blink_delayshort = .125
-                    self._blink_delaylongt = .125
+                    self._blink_delayshort = 0.125
+                    self._blink_delaylongt = 0.125
                 elif not self.controller.client_connected:
                     try:
                         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                        ipnummer=socket.inet_ntoa(fcntl.ioctl(
-                            s.fileno(),
-                            0x8915,  # SIOCGIFADDR
-                            struct.pack('256s', 'wlan0'[:15])
-                            )[20:24])
+                        ipnummer = socket.inet_ntoa(
+                            fcntl.ioctl(
+                                s.fileno(),
+                                0x8915,  # SIOCGIFADDR
+                                struct.pack("256s", "wlan0"[:15]),
+                            )[20:24]
+                        )
+                        logging.debug(f"ipnummer {ipnummer}")
                         self._blink_delayshort = 1
                         self._blink_delaylongt = 1
-                    except:
+                    except Exception:
                         self._blink_delayshort = 1.5
                         self._blink_delaylongt = 3
                 else:
-                    self._blink_delayshort = .5
-                    self._blink_delaylongt = .5
-            except:
+                    self._blink_delayshort = 0.5
+                    self._blink_delaylongt = 0.5
+            except Exception:
                 self._blink_delayshort = 3
                 self._blink_delaylongt = 3
-            logging.debug("blink rate: %f / %f", self._blink_delayshort, self._blink_delaylongt)
+            logging.debug(
+                "blink rate: %f / %f", self._blink_delayshort, self._blink_delaylongt
+            )
             sleep(2)
 
     @property
@@ -95,4 +111,3 @@ class Led(object):
     @blink_delaylongt.setter
     def blink_delaylongt(self, delaylongt):
         self._blink_delaylongt = delaylongt
-

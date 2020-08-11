@@ -1,9 +1,0 @@
-#!/usr/bin/env xdg-open
-[Desktop Entry]
-Name=Telescope Client
-Comment=Manual control for the telescope server
-Exec=telescope-client
-Icon=telescope-client
-Terminal=false
-Type=Application
-Categories=Science;
