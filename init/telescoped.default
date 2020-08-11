@@ -1,0 +1,32 @@
+# Define default options for telescoped
+#
+# HOST - listen on address
+#
+HOST="0.0.0.0"
+#
+#
+# PORT - port to listen
+#
+PORT=10000
+#
+#
+# CONTROLLER - python module that controls the telescope
+#              must be given in python dot notation
+#              and be in the python search path
+#
+CONTROLLER="telescope_server.controller"
+#
+#
+# LOGFILE - location of log-file
+#
+LOGFILE=/var/log/telescoped.log
+#
+#
+# LOGLEVEL - level of logging:
+#            INFO, WARNING, ERROR, CRITICAL
+LOGLEVEL=INFO
+#
+#
+# USER_PLUGINS - a space separated list of python modules
+#                in dot-notation on the python search path
+USER_PLUGINS=""

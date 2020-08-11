@@ -1,0 +1,13 @@
+[Unit]
+Description=Telescope Server
+After=network.target
+
+[Service]
+EnvironmentFile=-/etc/default/telescoped
+PassEnvironment=HOST PORT CONTROLLER LOGFILE LOGLEVEL USER_PLUGINS
+ExecStart=@BINDIR@/telescope-server
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
