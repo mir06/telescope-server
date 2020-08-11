@@ -46,6 +46,7 @@ class Motor(object):
             """
             return pow(x, skewnessbra) / pow(bra_steps, skewnessbra)
 
+        self.logger = logging.getLogger(__name__)
         self.name = name
         self.PUL, self.DIR, self.ENBL = pins
         self._steps_per_rev = 0
@@ -140,7 +141,7 @@ class Motor(object):
             list(range(len(self._bra_curve))),
             key=lambda i: abs(self._bra_curve[i] - current_delay),
         )
-        logging.debug("braking down within %d steps", accel_index)
+        self.logger.debug("braking down within %d steps", accel_index)
         for step in range(accel_index):
             step_delay = self._bra_curve[accel_index - step]
             GPIO.output(self.PUL, True)
@@ -157,7 +158,7 @@ class Motor(object):
 
     def step(self, steps, direction):
         if steps:
-            logging.debug(
+            self.logger.debug(
                 "INPUT -- %s: actual_step/steps/direction: %d / %d / %d",
                 self.name,
                 self._steps,
@@ -177,7 +178,7 @@ class Motor(object):
                     or (self._angle <= self._minimum and not direction)
                     or (self._angle >= self._maximum and direction)
                 ):
-                    logging.debug(
+                    self.logger.debug(
                         "BREAK -- %s: actual_step/steps/direction: %d / %d / %d",
                         self.name,
                         self._steps,
@@ -196,7 +197,7 @@ class Motor(object):
                     )
                     self._angle %= 360
                 time.sleep(step_delay)
-            logging.debug(
+            self.logger.debug(
                 "END -- %s: actual_step/steps/direction: %d / %d / %d",
                 self.name,
                 self._steps,

@@ -22,6 +22,7 @@ from telescope_server.gpio import GPIO
 class Manual(object):
     def __init__(self, controller):
         self.controller = controller
+        self.logger = logging.getLogger(__name__)
         self._pins_args = {
             # define the gpio pins and arguments for controller call
             22: (0, False),  # left
@@ -54,7 +55,7 @@ class Manual(object):
                     motor, direction = self._pins_args[self._pins[index]]
                     self.controller.start_stop_motor(motor, False, True)
                     if current[index]:
-                        logging.debug(
+                        self.logger.debug(
                             "manual start stop motor/direction: %s / %s",
                             motor,
                             direction,
@@ -67,6 +68,6 @@ class Manual(object):
         # set the angle for the object selected by the gui-client
         while True:
             GPIO.wait_for_edge(self._set_angle_pin, GPIO.FALLING)
-            logging.debug("manual calibration")
+            self.logger.debug("manual calibration")
             self.controller.apply_object()
             sleep(0.5)

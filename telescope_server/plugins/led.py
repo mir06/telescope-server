@@ -21,6 +21,7 @@ from telescope_server.gpio import GPIO
 class Led(object):
     def __init__(self, controller):
         self.controller = controller
+        self.logger = logging.getLogger(__name__)
         self.status_pin = 2
         self._blink_delayshort = 5
         self._blink_delaylongt = 5
@@ -47,22 +48,22 @@ class Led(object):
     def _check_status(self):
         # check if some client is connected and if so
         # check if object is tracked and adjust blinking speed
-        logging.debug(
+        self.logger.debug(
             "blink rate: %f / %f", self._blink_delayshort, self._blink_delaylongt
         )
         while True:
-            logging.debug(
+            self.logger.debug(
                 "blink rate: %f / %f", self._blink_delayshort, self._blink_delaylongt
             )
             try:
                 try:
-                    logging.debug("tracking: %s ", self.controller._is_tracking)
-                    logging.debug("motor on: %s", self.controller.is_motor_on)
-                    logging.debug(
+                    self.logger.debug("tracking: %s ", self.controller._is_tracking)
+                    self.logger.debug("motor on: %s", self.controller.is_motor_on)
+                    self.logger.debug(
                         "client connected %s", self.controller.client_connected
                     )
                 except Exception as e:
-                    logging.debug("Exeption: %s", e)
+                    self.logger.debug("Exeption: %s", e)
                 if self.controller._is_tracking:
                     self._blink_delayshort = 0.125
                     self._blink_delaylongt = 0.5
@@ -79,7 +80,7 @@ class Led(object):
                                 struct.pack("256s", "wlan0"[:15]),
                             )[20:24]
                         )
-                        logging.debug(f"ipnummer {ipnummer}")
+                        self.logger.debug(f"ipnummer {ipnummer}")
                         self._blink_delayshort = 1
                         self._blink_delaylongt = 1
                     except Exception:
@@ -91,7 +92,7 @@ class Led(object):
             except Exception:
                 self._blink_delayshort = 3
                 self._blink_delaylongt = 3
-            logging.debug(
+            self.logger.debug(
                 "blink rate: %f / %f", self._blink_delayshort, self._blink_delaylongt
             )
             sleep(2)

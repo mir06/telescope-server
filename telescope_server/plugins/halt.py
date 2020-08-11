@@ -26,4 +26,4 @@ class Halt(object):
         """
         that's the callback function that actually halts the raspberry pi
         """
-        subprocess.call(["halt"], shell=True)
+        subprocess.run("halt", shell=True)
