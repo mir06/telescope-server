@@ -51,7 +51,11 @@ def _getargs(args=None):
         default=os.environ.get("LOGFILE", "/var/log/telescoped.log"),
         help="set the log-filename",
     )
-    return parser.parse_args(args)
+    ret = parser.parse_args(args)
+    if not isinstance(ret.user_plugins, list):
+        ret.user_plugins = ret.user_plugins.split()
+
+    return ret
 
 
 def _load_plugin(modname, controller):
