@@ -26,7 +26,7 @@ import telescope_server.plugins as pl
 from telescope_server import handler
 
 
-def getargs():
+def _getargs(args=None):
     parser = argparse.ArgumentParser(description="Telescope Server")
     parser.add_argument("--host", default=os.environ.get("HOST", "0.0.0.0"))
     parser.add_argument("--port", type=int, default=os.environ.get("PORT", 10000))
@@ -34,6 +34,12 @@ def getargs():
         "--controller",
         default=os.environ.get("CONTROLLER", "telescope_server.controller"),
         help="module name that implements the Controller class",
+    )
+    parser.add_argument(
+        "--user-plugins",
+        nargs="+",
+        default=os.environ.get("USER_PLUGINS", []),
+        help="list of user plugins in python dot notation"
     )
     parser.add_argument(
         "--log-level",
@@ -45,31 +51,47 @@ def getargs():
         default=os.environ.get("LOGFILE", "/var/log/telescoped.log"),
         help="set the log-filename",
     )
-    args = parser.parse_args(sys.argv[1:])
-    return vars(args)
+    return parser.parse_args(args)
 
 
-def run(test=None):
+def _load_plugin(modname, controller):
+    """
+    Load a plugin from its name and try to instantiate it
+    with the given controller.
+    """
+    name = modname.split(".")[-1]
+    try:
+        module = importlib.import_module(modname)
+        plugin = module.__getattribute__(name.capitalize())(controller)
+        logging.info(f"plugin loaded: {name} ({module.__doc__.strip()})")
+    except Exception:
+        plugin = None
+        logging.warning(f"plugin {name} could not be loaded")
 
-    args = getargs()
+    return (name, plugin)
+
+
+def run(args=None):
+
+    args = _getargs(args)
 
     # set logging level
-    numeric_level = getattr(logging, args["log_level"].upper(), None)
+    numeric_level = getattr(logging, args.log_level.upper(), None)
     if not isinstance(numeric_level, int):
-        raise ValueError(f"Invalid log level: {args['log_level']}")
+        raise ValueError(f"Invalid log level: {args.log_level}")
 
     logging.basicConfig(
-        filename=args["log_file"],
+        filename=args.log_file,
         level=numeric_level,
-        format="%(levelname)s: %(asctime)s %(message)s",
+        format="%(asctime)s %(name)s %(levelname)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    controller_module = importlib.import_module(args["controller"])
+    controller_module = importlib.import_module(args.controller)
     controller = controller_module.Controller()
 
     server = handler.TelescopeServer(
-        (args["host"], args["port"]), controller, handler.TelescopeRequestHandler
+        (args.host, args.port), controller, handler.TelescopeRequestHandler
     )
 
     # load plugins and generate instance with the controller
@@ -77,13 +99,15 @@ def run(test=None):
     for importer, modname, ispkg in pkgutil.walk_packages(
         path=pl.__path__, prefix=pl.__name__ + "."
     ):
-        module = importlib.import_module(modname)
-        name = modname.split(".")[-1]
-        try:
-            plugins[name] = module.__getattribute__(name.capitalize())(controller)
-            logging.info(f"plugin loaded: {name} ({module.__doc__.strip()})")
-        except Exception:
-            pass
+        name, plugin = _load_plugin(modname, controller)
+        if plugin:
+            plugins[name] = plugin
+
+    # load extra plugin
+    for user_plugin in args.user_plugins:
+        name, plugin = _load_plugin(user_plugin, controller)
+        if plugin:
+            plugins[name] = plugin
 
     # terminate with Ctrl-C
     try:
