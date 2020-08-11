@@ -39,7 +39,7 @@ def _getargs(args=None):
         "--user-plugins",
         nargs="+",
         default=os.environ.get("USER_PLUGINS", []),
-        help="list of user plugins in python dot notation"
+        help="list of user plugins in python dot notation",
     )
     parser.add_argument(
         "--log-level",

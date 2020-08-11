@@ -40,7 +40,7 @@ class Controller(BaseController):
     def __init__(self):
 
         self.logger = logging.getLogger(__name__)
-        
+
         # initialize the motors
         self.motors = [
             Motor("Azimuth", self.az_pins, positive=1),
