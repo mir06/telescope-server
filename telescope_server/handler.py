@@ -25,11 +25,10 @@ from bitstring import ConstBitStream
 # First party
 from telescope_server.protocol import command
 
+logger = logging.getLogger(__name__)
+
 
 class TelescopeRequestHandler(socketserver.BaseRequestHandler):
-    def __init__(self):
-        self.logger = logging.getLogger(__name__)
-
     def _stellarium2coords(self, ra_uint, dec_int):
         return (ra_uint * 12.0 / 2147483648, dec_int * 90.0 / 1073741824)
 
@@ -98,13 +97,13 @@ class TelescopeRequestHandler(socketserver.BaseRequestHandler):
             self.request.settimeout(0.01)
             try:
                 data0 = self.request.recv(160)
-                self.logger.debug("Input")
-                self.logger.debug(data0)
+                logger.debug("Input")
+                logger.debug(data0)
                 data = ConstBitStream(bytes=data0, length=160)
-                self.logger.debug(data)
+                logger.debug(data)
                 data.read("intle:16")
                 mtype = data.read("intle:16")
-                self.logger.debug("mtype: %s ", mtype)
+                logger.debug("mtype: %s ", mtype)
                 if mtype == command.STELLARIUM:
                     # stellarium telescope client
                     ra, dec = self._unpack_stellarium(data)
@@ -116,7 +115,7 @@ class TelescopeRequestHandler(socketserver.BaseRequestHandler):
                     try:
                         self.server.controller.set_observer(lon, lat, alt)
                     except Exception:
-                        self.logger.error("could not set location")
+                        logger.error("could not set location")
                     break
 
                 elif mtype == command.START_CAL:
@@ -124,7 +123,7 @@ class TelescopeRequestHandler(socketserver.BaseRequestHandler):
                     try:
                         self.server.controller.start_calibration()
                     except Exception:
-                        self.logger.error("cannot start calibration")
+                        logger.error("cannot start calibration")
                     break
 
                 elif mtype == command.STOP_CAL:
@@ -132,7 +131,7 @@ class TelescopeRequestHandler(socketserver.BaseRequestHandler):
                     try:
                         self.server.controller.stop_calibration()
                     except Exception:
-                        self.logger.error("cannot stop calibration")
+                        logger.error("cannot stop calibration")
                     break
 
                 elif mtype == command.MAKE_STEP:
@@ -143,7 +142,7 @@ class TelescopeRequestHandler(socketserver.BaseRequestHandler):
                     try:
                         self.server.controller.make_step(azimuth_steps, altitude_steps)
                     except Exception:
-                        self.logger.error("cannot make steps")
+                        logger.error("cannot make steps")
                     break
 
                 elif mtype == command.START_MOT:
@@ -161,7 +160,7 @@ class TelescopeRequestHandler(socketserver.BaseRequestHandler):
                     try:
                         self.server.controller.set_object(object_id)
                     except Exception:
-                        self.logger.error("cannot set controller to given object")
+                        logger.error("cannot set controller to given object")
                     break
 
                 elif mtype == command.TOGGLE_TRACK:
@@ -169,7 +168,7 @@ class TelescopeRequestHandler(socketserver.BaseRequestHandler):
                     try:
                         self.server.controller.toggle_tracking()
                     except Exception:
-                        self.logger.error("cannot toggle tracking")
+                        logger.error("cannot toggle tracking")
                     break
 
                 elif mtype == command.APPLY_OBJECT:
@@ -178,7 +177,7 @@ class TelescopeRequestHandler(socketserver.BaseRequestHandler):
                     try:
                         self.server.controller.apply_object()
                     except Exception:
-                        self.logger.error("cannot apply controller to given object")
+                        logger.error("cannot apply controller to given object")
                     break
 
                 elif mtype == command.RAS_SHUTDOWN:
@@ -186,7 +185,7 @@ class TelescopeRequestHandler(socketserver.BaseRequestHandler):
                     try:
                         subprocess.run("halt", shell=True)
                     except Exception:
-                        self.logger.error("cannot shutdown rasberry")
+                        logger.error("cannot shutdown rasberry")
                     break
 
                 elif mtype == command.RAS_RESTART:
@@ -194,7 +193,7 @@ class TelescopeRequestHandler(socketserver.BaseRequestHandler):
                     try:
                         subprocess.run("reboot", shell=True)
                     except Exception:
-                        self.logger.error("cannot restart rasberry")
+                        logger.error("cannot restart rasberry")
                     break
 
                 elif mtype == command.TEL_RESTART:
@@ -204,7 +203,7 @@ class TelescopeRequestHandler(socketserver.BaseRequestHandler):
                             "systemctl restart telescoped.service", shell=True
                         )
                     except Exception:
-                        self.logger.error("cannot restart telescope-server")
+                        logger.error("cannot restart telescope-server")
                     break
 
                 elif mtype == command.STATUS:
@@ -212,11 +211,11 @@ class TelescopeRequestHandler(socketserver.BaseRequestHandler):
                     status_code = self._unpack_data(data, "intle:16")
                     try:
                         response = self.server.controller.get_status(status_code)
-                        self.logger.debug("response: %s ", response)
+                        logger.debug("response: %s ", response)
                         self.request.sendall(response.encode())
                         sleep(0.01)
                     except Exception as exc:
-                        self.logger.error(f"{exc} cannot get status of controller")
+                        logger.error(f"{exc} cannot get status of controller")
                     break
 
             except Exception:
