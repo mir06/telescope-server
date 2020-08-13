@@ -10,10 +10,8 @@ plugin to handle a the manual control
 import _thread
 import logging
 
+from operator import xor
 from time import sleep
-
-# Third party
-import numpy as np
 
 # First party
 from telescope_server.gpio import GPIO
@@ -46,22 +44,21 @@ class Manual(object):
 
     def _motor_control(self):
         # start and stop motors depending on button press
-        running = np.zeros(4, dtype=np.int)
+        running = [0, 0, 0, 0]
         while True:
-            current = np.array([GPIO.input(pin) for pin in self._pins])
-            change = np.where(np.logical_xor(current, running))[0]
-            if len(change):
-                for index in change:
-                    motor, direction = self._pins_args[self._pins[index]]
-                    self.controller.start_stop_motor(motor, False, True)
-                    if current[index]:
-                        self.logger.debug(
-                            "manual start stop motor/direction: %s / %s",
-                            motor,
-                            direction,
-                        )
-                        self.controller.start_stop_motor(motor, True, direction)
-                running = current
+            current = [GPIO.input(pin) for pin in self._pins]
+            change = [i for i, val in enumerate(map(xor, running, current)) if val == 1]
+            for index in change:
+                motor, direction = self._pins_args[self._pins[index]]
+                self.controller.start_stop_motor(motor, False, True)
+                if current[index]:
+                    self.logger.debug(
+                        "manual start stop motor/direction: %s / %s",
+                        motor,
+                        direction,
+                    )
+                    self.controller.start_stop_motor(motor, True, direction)
+            running = current
             sleep(0.05)
 
     def _set_angle(self):

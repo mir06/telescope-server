@@ -7,6 +7,7 @@ import logging
 
 from datetime import datetime
 from itertools import combinations
+from statistics import median
 from sys import maxsize
 from threading import Thread, Timer
 from time import sleep
@@ -14,8 +15,6 @@ from time import sleep
 # Third party
 import ephem
 import ephem.stars
-
-from numpy import median
 
 # First party
 from telescope_server.protocol import status
