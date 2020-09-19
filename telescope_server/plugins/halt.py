@@ -9,21 +9,18 @@ plugin to halt raspberry pi on button press
 # Standard Library
 import subprocess
 
-# First party
-from telescope_server.gpio import GPIO
+# Third party
+from gpiozero import Button
 
 
 class Halt(object):
     def __init__(self, controller):
         halt_pin = 4
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup(halt_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-        GPIO.add_event_detect(
-            halt_pin, GPIO.RISING, callback=self._halt, bouncetime=500
-        )
+        self.button = Button(halt_pin, bouncetime=0.5)
+        self.button.when_released = self._halt
 
     def _halt(self, channel):
         """
         that's the callback function that actually halts the raspberry pi
         """
-        subprocess.run("halt", shell=True)
+        subprocess.run(["sudo", "poweroff"])
