@@ -16,8 +16,8 @@ from gpiozero import Button
 class Halt(object):
     def __init__(self, controller):
         halt_pin = 4
-        self.button = Button(halt_pin, bouncetime=0.5)
-        self.button.when_released = self._halt
+        self.button = Button(halt_pin, pull_up=False)
+        self.button.when_held = self._halt
 
     def _halt(self, channel):
         """
