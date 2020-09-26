@@ -11,17 +11,16 @@ import logging
 
 from time import sleep
 
-# First party
-from telescope_server.gpio import GPIO
+# Third party
+from gpiozero import Button
 
 
 class Track(object):
     def __init__(self, controller):
         self.controller = controller
         self.logger = logging.getLogger(__name__)
-        self._track_pin = 17
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup(self._track_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        track_pin = 17
+        self.button = Button(track_pin)
         _thread.start_new_thread(self._toggle_track, ())
 
     def _toggle_track(self):
@@ -29,7 +28,7 @@ class Track(object):
         that's the callback function that toggles tracking
         """
         while True:
-            GPIO.wait_for_edge(self._track_pin, GPIO.FALLING)
-            self.logger.debug("tracking edge")
+            self.button.wait_for_press()
+            self.logger.debug("toggle tracking")
             self.controller.toggle_tracking()
             sleep(0.5)
