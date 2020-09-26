@@ -8,8 +8,8 @@ import time
 
 from math import cos, pi, pow
 
-# Local imports
-from .gpio import GPIO
+# Third party
+from gpiozero import OutputDevice
 
 
 class Motor(object):
@@ -20,7 +20,7 @@ class Motor(object):
         min_angle=-5,
         max_angle=365,
         positive=1,
-        vend=4500,
+        vend=8000,
         vstart=20,
         skewness=0.75,
         # accel_steps=4000,
@@ -48,7 +48,6 @@ class Motor(object):
 
         self.logger = logging.getLogger(__name__)
         self.name = name
-        self.PUL, self.DIR, self.ENBL = pins
         self._steps_per_rev = 0
         self._enabled = True
         self._angle = 0
@@ -59,9 +58,9 @@ class Motor(object):
         self._delay = 1.0 / vend
         self._positive = positive
         self._brake_steps = accel_steps
-        for p in pins:
-            GPIO.setup(p, GPIO.OUT)
-            GPIO.output(p, False)
+        self.PUL = OutputDevice(pins[0])
+        self.DIR = OutputDevice(pins[1])
+        self.ENBL = OutputDevice(pins[2])
 
         self._accel_curve = [
             1.0 / _accel_velocity(_accel_skewing(x)) for x in range(accel_steps)
@@ -95,7 +94,10 @@ class Motor(object):
     @enable.setter
     def enable(self, enabled=True):
         self._enabled = enabled
-        GPIO.output(self.ENBL, enabled)
+        if enabled:
+            self.ENBL.on()
+        else:
+            self.ENBL.off()
 
     @property
     def angle(self):
@@ -144,15 +146,16 @@ class Motor(object):
         self.logger.debug("braking down within %d steps", accel_index)
         for step in range(accel_index):
             step_delay = self._bra_curve[accel_index - step]
-            GPIO.output(self.PUL, True)
-            GPIO.output(self.PUL, False)
+            self.PUL.on()
+            time.sleep(step_delay)
+            self.PUL.off()
+            time.sleep(step_delay)
             self._steps += 2 * (direction - 0.5) * self._positive
             if self._steps_per_rev > 0:
                 self._angle += (direction - 0.5) * (
                     self._positive * 720.0 / self._steps_per_rev
                 )
                 self._angle %= 360
-            time.sleep(step_delay)
         self.step(accel_index, not direction)
         self._stop = True
 
@@ -166,7 +169,11 @@ class Motor(object):
                 direction,
             )
             self._stop = False
-            GPIO.output(self.DIR, direction)
+            if direction:
+                self.DIR.on()
+            else:
+                self.DIR.off()
+                
             for step in range(steps):
                 try:
                     step_delay = self._accel_curve[min(step, abs(step - (steps - 1)))]
@@ -188,15 +195,16 @@ class Motor(object):
                     self.brake(step_delay, direction)
                     break
 
-                GPIO.output(self.PUL, True)
-                GPIO.output(self.PUL, False)
+                self.PUL.on()
+                time.sleep(step_delay)
+                self.PUL.off()
+                time.sleep(step_delay)
                 self._steps += 2 * (direction - 0.5) * self._positive
                 if self._steps_per_rev > 0:
                     self._angle += (direction - 0.5) * (
                         self._positive * 720.0 / self._steps_per_rev
                     )
                     self._angle %= 360
-                time.sleep(step_delay)
             self.logger.debug(
                 "END -- %s: actual_step/steps/direction: %d / %d / %d",
                 self.name,
