@@ -20,7 +20,7 @@ class Motor(object):
         min_angle=-5,
         max_angle=365,
         positive=1,
-        vend=8000,
+        vend=5000,
         vstart=20,
         skewness=0.75,
         # accel_steps=4000,
@@ -147,7 +147,6 @@ class Motor(object):
         for step in range(accel_index):
             step_delay = self._bra_curve[accel_index - step]
             self.PUL.on()
-            time.sleep(step_delay)
             self.PUL.off()
             time.sleep(step_delay)
             self._steps += 2 * (direction - 0.5) * self._positive
@@ -196,7 +195,6 @@ class Motor(object):
                     break
 
                 self.PUL.on()
-                time.sleep(step_delay)
                 self.PUL.off()
                 time.sleep(step_delay)
                 self._steps += 2 * (direction - 0.5) * self._positive
