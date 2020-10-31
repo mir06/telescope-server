@@ -10,61 +10,68 @@ plugin to handle a the manual control
 import _thread
 import logging
 
-from operator import xor
 from time import sleep
 
-# First party
-from telescope_server.gpio import GPIO
+# Third party
+from gpiozero import Button
 
 
 class Manual(object):
     def __init__(self, controller):
         self.controller = controller
         self.logger = logging.getLogger(__name__)
-        self._pins_args = {
-            # define the gpio pins and arguments for controller call
-            22: (0, False),  # left
-            27: (0, True),  # right
-            11: (1, False),  # up
-            9: (1, True),  # down
-        }
-        self._pins = list(self._pins_args.keys())
-        self._set_angle_pin = 10
 
         # motor control
-        for pin in list(self._pins_args.keys()):
-            GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+        self.left = Button(22, pull_up=False)
+        self.right = Button(27, pull_up=False)
+        self.up = Button(11, pull_up=False)
+        self.down = Button(9, pull_up=False)
 
-        # set object angle control
-        GPIO.setup(self._set_angle_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        self.motor_control = {0: (self.right, self.left), 1: (self.down, self.up)}
+
+        self.set_angle = Button(10)
 
         # start two threads
         _thread.start_new_thread(self._motor_control, ())
         _thread.start_new_thread(self._set_angle, ())
 
     def _motor_control(self):
+        def _get_current(b1, b2):
+            """
+            Check which of the two given buttons are pressed
+
+            Returns:
+
+                A tuple of two booleans; the first indicates if motors shall
+                run, the second is the direction (True for the first, False
+                if second button is pressed)
+            """
+            running = b1.is_pressed != b2.is_pressed
+            direction = None
+            if running:
+                direction = b1.is_pressed
+            return (running, direction)
+
         # start and stop motors depending on button press
-        running = [0, 0, 0, 0]
+        current = {0: (False, None), 1: (False, None)}
         while True:
-            current = [GPIO.input(pin) for pin in self._pins]
-            change = [i for i, val in enumerate(map(xor, running, current)) if val == 1]
-            for index in change:
-                motor, direction = self._pins_args[self._pins[index]]
-                self.controller.start_stop_motor(motor, False, True)
-                if current[index]:
-                    self.logger.debug(
-                        "manual start stop motor/direction: %s / %s",
-                        motor,
-                        direction,
-                    )
-                    self.controller.start_stop_motor(motor, True, direction)
-            running = current
+            for motor, buttons in self.motor_control.items():
+                c = _get_current(*buttons)
+                if c != current[motor]:
+                    # stop and eventually start in the opposite direction
+                    current[motor] = c
+                    self.controller.start_stop_motor(motor, False, True)
+                    self.logger.debug(f"stop motor {motor}")
+                    if c[0]:
+                        self.controller.start_stop_motor(motor, True, c[1])
+                        self.logger.debug(f"start in direction {c[1]}")
+
             sleep(0.05)
 
     def _set_angle(self):
         # set the angle for the object selected by the gui-client
         while True:
-            GPIO.wait_for_edge(self._set_angle_pin, GPIO.FALLING)
+            self.set_angle.wait_for_press()
             self.logger.debug("manual calibration")
             self.controller.apply_object()
             sleep(0.5)
