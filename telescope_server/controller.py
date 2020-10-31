@@ -266,9 +266,8 @@ class Controller(BaseController):
         )
         ra /= 15.0 * ephem.degree
         dec /= ephem.degree
-        """
         self.logger.debug("send: %f / %f", ra, dec)
-        """
+
         return ra, dec
 
     def set_observer(self, lon, lat, alt):
